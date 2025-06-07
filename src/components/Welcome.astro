@@ -1,13 +1,36 @@
 ---
+import { getStaticPaths } from "../pages/recipes/[recipe].astro";
 
+const paths = getStaticPaths();
+
+const recipes = (await Astro.glob("../content/recipes/*.md"))
+  .map((r) => {
+    return {
+      recipe: r.frontmatter,
+      url: r.file.split("/").pop()?.replace(".md", ""),
+      published: r.frontmatter.published,
+    };
+  })
+  .filter((r) => r.published !== false);
 ---
 
 <div>
   <main>
-    <div
-      class="flex flex-col items-center bg-orange-300 max-w-2xl m-auto min-h-dvh"
-    >
+    <div class="flex flex-col bg-orange-300 max-w-2xl m-auto min-h-dvh">
       <h2 class="bg-red-500 font-bold">gustoso</h2>
+      <div class="flex flex-col items-center justify-center">
+        {
+          recipes.map((r) => (
+            <a
+              href={`/recipes/${r.url}`}
+              class="text-blue-500 bg-stone-200 my-0.5 p-2 w-full "
+            >
+              {r.recipe.title}
+              <div class="flex">{r.recipe.type}</div>
+            </a>
+          ))
+        }
+      </div>
     </div>
   </main>
 </div>

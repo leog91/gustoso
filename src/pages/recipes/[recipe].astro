@@ -1,0 +1,122 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import leftArrow from "../../assets/left-arrow.svg";
+
+const { recipe } = Astro.params;
+
+export function getStaticPaths() {
+  return [
+    { params: { recipe: "great-recipe" } },
+    { params: { recipe: "energy-balls" } },
+  ];
+}
+
+export interface RecipeStep {
+  step: number;
+  descripcion: string;
+}
+
+export interface Recipe {
+  url: string;
+  frontmatter: {
+    title: string;
+    author?: string;
+    ingredients?: string[];
+    serves?: string;
+    instructions?: RecipeStep;
+    storage?: string;
+    type?: string;
+  };
+}
+
+const recipes = await Astro.glob("../../content/recipes/*.md");
+
+const currentRecipe = recipes.find(
+  (post) => post.file.split("/").pop()?.replace(".md", "") === recipe
+);
+---
+
+<Layout>
+  <div
+    class="flex flex-col bg-white text-neutral-900 max-w-2xl m-auto min-h-dvh"
+  >
+    <div class="flex p-4 mb-4">
+      <div class="text-center absolute font-semibold text-xl w-full max-w-2xl">
+        {recipe}
+      </div>
+      <a href={`/`} class="absolute">
+        <img src={leftArrow.src} alt="image description" />
+      </a>
+    </div>
+    <div>
+      {
+        currentRecipe && (
+          <div class="p-4 ">
+            <div class="bg-blue-500 mb-4 mx-auto w-full aspect-square max-w-96" />
+            {/* <img
+            src={currentRecipe.frontmatter.image}
+            alt={currentRecipe.frontmatter.title}
+            class="w-full h-auto mb-4"
+          /> */}
+
+            <div class="flex items-center justify-between">
+              <h1 class=" mb-4 font-semibold text-2xl">
+                {currentRecipe.frontmatter.title}
+              </h1>
+              <div>
+                {currentRecipe.frontmatter.type && (
+                  <div class="bg-stone-500 text-white rounded-xl px-2 ">
+                    {currentRecipe.frontmatter.type}
+                  </div>
+                )}
+              </div>
+            </div>
+            {currentRecipe.frontmatter.serves && (
+              <p class="text-stone-500"> {currentRecipe.frontmatter.serves}</p>
+            )}
+
+            {currentRecipe.frontmatter.ingredients && (
+              <>
+                <h2 class="font-semibold">Ingredients:</h2>
+                <ol>
+                  {currentRecipe.frontmatter.ingredients.map(
+                    (ingredient: string) => (
+                      <li class="pl-2"> • {ingredient}</li>
+                    )
+                  )}
+                </ol>
+              </>
+            )}
+            {currentRecipe.frontmatter.instructions && (
+              <>
+                <h2 class="font-semibold">Ingredients:</h2>
+                <ol>
+                  {currentRecipe.frontmatter.instructions.map(
+                    (i: RecipeStep) => (
+                      <li class="pl-2">
+                        {" "}
+                        • {i.step} - {i.descripcion}
+                      </li>
+                    )
+                  )}
+                </ol>
+              </>
+            )}
+            {currentRecipe.frontmatter.storage && (
+              <>
+                <h2 class="font-semibold">Storage:</h2>
+
+                {currentRecipe.frontmatter.storage}
+              </>
+            )}
+            <div class="content">
+              <h2 class="font-semibold">Instructions:</h2>
+
+              <currentRecipe.Content />
+            </div>
+          </div>
+        )
+      }
+    </div>
+  </div>
+</Layout>
