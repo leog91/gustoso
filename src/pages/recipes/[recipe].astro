@@ -8,6 +8,10 @@ export function getStaticPaths() {
   return [
     { params: { recipe: "great-recipe" } },
     { params: { recipe: "energy-balls" } },
+    { params: { recipe: "chimi-clasico" } },
+    { params: { recipe: "crema-pastelera" } },
+    { params: { recipe: "pasta-frola" } },
+    { params: { recipe: "budin-de-banana" } },
   ];
 }
 
@@ -89,13 +93,13 @@ const currentRecipe = recipes.find(
             )}
             {currentRecipe.frontmatter.instructions && (
               <>
-                <h2 class="font-semibold">Ingredients:</h2>
+                <h2 class="font-semibold">Instructions:</h2>
                 <ol>
                   {currentRecipe.frontmatter.instructions.map(
                     (i: RecipeStep) => (
                       <li class="pl-2">
                         {" "}
-                        • {i.step} - {i.descripcion}
+                        {i.step} - {i.descripcion}
                       </li>
                     )
                   )}
@@ -110,7 +114,7 @@ const currentRecipe = recipes.find(
               </>
             )}
             <div class="content">
-              <h2 class="font-semibold">Instructions:</h2>
+              {/* <h2 class="font-semibold">Instructions:</h2> */}
 
               <currentRecipe.Content />
             </div>
