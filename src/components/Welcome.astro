@@ -16,17 +16,21 @@ const recipes = (await Astro.glob("../content/recipes/*.md"))
 
 <div>
   <main>
-    <div class="flex flex-col bg-orange-300 max-w-2xl m-auto min-h-dvh">
-      <h2 class="bg-red-500 font-bold">gustoso</h2>
-      <div class="flex flex-col items-center justify-center">
+    <div class="flex mt-1 flex-col bg-neutral-800 max-w-2xl m-auto min-h-dvh">
+      <div class="flex flex-col items-center border-t-2 justify-center">
         {
           recipes.map((r) => (
             <a
               href={`/recipes/${r.url}`}
-              class="text-blue-500 bg-stone-200 my-0.5 p-2 w-full "
+              class="font-semibold my-0.5 space-y-0.5 border-b-2 hover:bg-neutral-700 flex justify-between p-2 w-full "
             >
               {r.recipe.title}
-              <div class="flex">{r.recipe.type}</div>
+
+              {r.recipe.type ? (
+                <div class="border-transparent bg-red-500 text-white px-2 text-sm flex items-center rounded-3xl">
+                  {r.recipe.type}
+                </div>
+              ) : null}
             </a>
           ))
         }
