@@ -6,30 +6,37 @@ const { recipe } = Astro.params;
 
 export function getStaticPaths() {
   return [
-    { params: { recipe: "great-recipe" } },
     { params: { recipe: "energy-balls" } },
     { params: { recipe: "chimi-clasico" } },
     { params: { recipe: "crema-pastelera" } },
     { params: { recipe: "pasta-frola" } },
     { params: { recipe: "budin-de-banana" } },
+    { params: { recipe: "steps" } },
+    { params: { recipe: "example" } },
   ];
 }
 
 export interface RecipeStep {
   step: number;
-  descripcion: string;
+  description: string;
+}
+
+interface RecipePart {
+  name?:string
+  ingredients?: string[];
+  instructions?: RecipeStep[];
 }
 
 export interface Recipe {
   url: string;
   frontmatter: {
     title: string;
-    author?: string;
-    ingredients?: string[];
-    serves?: string;
-    instructions?: RecipeStep;
-    storage?: string;
     type?: string;
+    author?: string;
+    serves?: string;
+    storage?: string;
+    description?: string;
+    parts: RecipePart[];
   };
 }
 
@@ -79,33 +86,37 @@ const currentRecipe = recipes.find(
               <p class="text-stone-500"> {currentRecipe.frontmatter.serves}</p>
             )}
 
-            {currentRecipe.frontmatter.ingredients && (
-              <>
-                <h2 class="font-semibold">Ingredients:</h2>
-                <ol>
-                  {currentRecipe.frontmatter.ingredients.map(
-                    (ingredient: string) => (
-                      <li class="pl-2"> • {ingredient}</li>
-                    )
-                  )}
-                </ol>
-              </>
+            {currentRecipe.frontmatter.description && (
+              <div> {currentRecipe.frontmatter.description}</div>
             )}
-            {currentRecipe.frontmatter.instructions && (
-              <>
-                <h2 class="font-semibold">Instructions:</h2>
-                <ol>
-                  {currentRecipe.frontmatter.instructions.map(
-                    (i: RecipeStep) => (
+
+            {currentRecipe.frontmatter.parts &&
+              currentRecipe.frontmatter.parts.map((p: RecipePart) => (
+                <div class="mb-4">
+                  {p.name && 
+                  <h2 class="font-semibold text-xl mb-1">{p.name}</h2>
+                  }
+                  <h2 class="font-semibold">Ingredients:</h2>
+                  <ol>
+                    {p.ingredients?.map((i) => (
+                      <li class="pl-2"> • {i}</li>
+                    ))}
+                  </ol>
+                  {p.instructions &&
+                   <h2 class="font-semibold">Instructions:</h2>
+                  <ol>
+                    {p.instructions?.map((ins) => (
                       <li class="pl-2">
                         {" "}
-                        {i.step} - {i.descripcion}
+                        {ins.step} - {ins.description}
                       </li>
-                    )
-                  )}
-                </ol>
-              </>
-            )}
+                    ))}
+                  </ol> 
+                  }                  
+                </div>
+              ))}
+
+            
             {currentRecipe.frontmatter.storage && (
               <>
                 <h2 class="font-semibold">Storage:</h2>
@@ -114,8 +125,6 @@ const currentRecipe = recipes.find(
               </>
             )}
             <div class="content">
-              {/* <h2 class="font-semibold">Instructions:</h2> */}
-
               <currentRecipe.Content />
             </div>
           </div>
