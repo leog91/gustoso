@@ -1,6 +1,5 @@
 ---
 title: Crema Pastelera
-description: 22Find out what makes Astro awesome!
 parts:
   - ingredients:
       - 500g leche

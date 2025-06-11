@@ -1,7 +1,5 @@
 ---
 title: Chimi clásico
-# author: 22Himanshu
-# serves: Serves 4
 parts:
   - ingredients:
       - 2 partes de oregano
