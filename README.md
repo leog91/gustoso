@@ -1,5 +1,8 @@
 # Astro Starter Kit: Basics
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/3450f4e4-7208-44c8-9175-2bde6ac5d65e/deploy-status)](https://app.netlify.com/projects/gustoso-app/deploys)
+
+
 ```sh
 npm create astro@latest -- --template basics
 ```
