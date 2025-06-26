@@ -1,4 +1,5 @@
 ---
+import Search from "../components/Search.astro";
 import Welcome from "../components/Welcome.astro";
 import Layout from "../layouts/Layout.astro";
 
@@ -7,6 +8,13 @@ import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout>
-  <h2 class="bg-zinc-900 text-2xl pl-5 font-bold pb-2 shadow-lg">gustoso</h2>
+  <div class="grid grid-cols-3 items-center">
+    <h2 class="text-2xl pl-5 font-bold pb-2 shadow-lg">gustoso</h2>
+    <div class="col-span-2">
+      <Search />
+    </div>
+  </div>
+
   <Welcome />
+  <!-- <dialog id="results" class="inset-1/2" open>asd</dialog> -->
 </Layout>
