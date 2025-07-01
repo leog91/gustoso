@@ -2,9 +2,9 @@
 import search from "../assets/search.svg";
 ---
 
-<div class="my-1.5">
+<div class="absolute sm:w-9/12 top-1.5 flex flex-col">
   <form
-    class="max-w-96 m-auto p-1 bg-neutral-700 rounded-full flex items-center justify-between"
+    class="max-w-96 m-auto p-1 bg-neutral-700 rounded-full flex items-center justify-between w-full"
   >
     <input
       class="px-2 placeholder-stone-200 w-full rounded-full"
@@ -18,124 +18,93 @@ import search from "../assets/search.svg";
       <img class="" src={search.src} alt="search icon" /></button
     >
   </form>
-</div>
-
-<dialog id="results" class="w-full m-auto max-w-2xl bg-stone-500">
-  <div class="w-full flex justify-end">
-    <button
-      id="close"
-      class="cursor-pointer mx-2 size-6 hover:bg-red-300 bg-red-500"
-      aria-label="close">X</button
-    >
+  <div
+    id="results"
+    class="max-w-96 bg-neutral-700 hidden p-1 mt-1 rounded-lg mx-auto w-full"
+  >
+    <!-- <div class="w-full flex justify-end">
+      <button
+        id="close"
+        class="cursor-pointer mx-2 size-6 hover:bg-red-300 bg-red-500"
+        aria-label="close">X</button
+      >
+    </div> -->
+    <ul id="results-list" class="p-2 text-white max-w-2xl w-full"></ul>
   </div>
-  <ul id="results-list" class="p-4 text-white max-w-2xl w-full"></ul>
-</dialog>
+</div>
 
 <script>
   import { actions } from "astro:actions";
 
-  // import { navigate } from "astro:transitions/client";
-
   const form = document.querySelector("form");
+  const input = document.getElementById("search") as HTMLInputElement | null;
+  const resultsWrapper = document.getElementById("results");
+  const resultsList = document.getElementById("results-list");
+
+  document.addEventListener("click", function (event) {
+    if (
+      resultsWrapper &&
+      event.target instanceof Node &&
+      !resultsWrapper.contains(event.target) &&
+      !input?.contains(event.target)
+    ) {
+      resultsWrapper.classList.add("hidden");
+      // input?.blur();
+    }
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      resultsWrapper?.classList.add("hidden");
+      // input?.blur();
+    }
+  });
+
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (!form) return;
+
     const formData = new FormData(form);
     const searchTerm = formData.get("search");
 
-    const closeButton = document.getElementById("close");
-
-    const dialog = document.getElementById(
-      "results"
-    ) as HTMLDialogElement | null;
-    // function openCheck() {
-    //   if (dialog && dialog.open) {
-    //     console.log("Dialog open");
-    //   } else {
-    //     console.log("Dialog closed");
-    //   }
-    // }
-
-    function onClick(event: MouseEvent) {
-      if (event.target === dialog && dialog) {
-        dialog.close();
-      }
-    }
-
-    if (dialog) {
-      dialog.addEventListener("click", onClick);
-    }
-
-    if (closeButton) {
-      closeButton.addEventListener("click", () => {
-        if (dialog) {
-          dialog.close();
-        }
-      });
-    }
-
-    // openCheck();
-
     const filteredRecipes = await actions.search(formData);
-
-    // if list is EMPTY, dont show modal
-
-    // validate input
-    console.table(filteredRecipes.data?.map((r) => r.item.url));
-
-    const resultsList = document.getElementById("results-list");
 
     if (resultsList) {
       resultsList.innerHTML = "";
     }
 
-    // Add new results
-    if (filteredRecipes.data) {
-      filteredRecipes.data.forEach((r) => {
-        const li = document.createElement("li");
-
-        const a = document.createElement("a");
-        a.href = "/recipes/" + r.item.url;
-        //remove unmaed, url
-        a.textContent = r.item.title ?? r.item.url ?? "Unnamed Recipe";
-        a.classList.add(
-          "block",
-          "text-sm",
-          "bg-zinc-800",
-          "text-zinc-200",
-          "hover:text-white",
-          "hover:underline",
-          "cursor-pointer",
-          "my-2",
-          "py-1"
-        );
-
-        li.appendChild(a);
-        resultsList?.appendChild(li);
-
-        // const li = document.createElement("li");
-        // li.textContent = r.item.title ?? r.item.url ?? "Unnamed Recipe";
-        // li.classList.add("bg-green-500", "my-4");
-        // resultsList?.appendChild(li);
-      });
+    if (!filteredRecipes.data || filteredRecipes.data.length === 0) {
+      resultsWrapper?.classList.add("hidden");
+      return;
     }
 
-    // Open the dialog if not already open
-    if (dialog && !dialog.open) {
-      dialog.showModal();
-    }
+    filteredRecipes.data.forEach((r) => {
+      const li = document.createElement("li");
 
-    //
+      const a = document.createElement("a");
+      a.href = "/recipes/" + r.item.url;
+      a.textContent = r.item.title ?? r.item.url ?? "Unnamed Recipe";
+      a.classList.add(
+        "block",
+        // "text-sm",
+        // "bg-zinc-800",
+        // "text-zinc-200",
+        // "text-white"
+        "text-white",
+        "hover:bg-neutral-600",
+        "cursor-pointer",
+        "rounded-lg",
+        // "my-2",
+        "px-3"
+      );
 
-    // const { error } = await actions.search(formData);
-    // if (!error) navigate("/confirmation");
-    // if (!error) {
-    //   const url = new URL("/", window.location.origin);
-    //   url.searchParams.set("q", searchTerm);
-    //   window.location.assign(url.toString());
-    // }
+      li.appendChild(a);
+      resultsList?.appendChild(li);
+    });
+
+    // Show results
+    resultsWrapper?.classList.remove("hidden");
   });
-
-  //
 </script>
 <style>
   dialog::backdrop {
