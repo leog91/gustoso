@@ -1,5 +1,6 @@
 ---
 title: Chimi clásico
+img: https://i.imgur.com/7R2u6U3.jpeg
 parts:
   - ingredients:
       - 2 partes de oregano
