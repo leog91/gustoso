@@ -1,0 +1,110 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+const pizzaIngredients = [
+  "Basil",
+  "Nduja",
+  "Goat Cheese",
+  "Olives",
+  "Mushrooms",
+  "Cherry",
+  "Cheese",
+  "T. Sauce",
+];
+
+const bigContainers = [
+  {
+    id: "mixed-2x2-3smalls",
+    type: "mixed",
+    name: "Pizza bottom",
+    squares: ["Tuscan Sausage", "Spinach", "Spianata", "Pancetta"],
+    smalls: ["Fig Jam", "Onion", "Chilli"],
+  },
+  {
+    id: "mixed-2x2-3smalls",
+    type: "mixed",
+    name: "Salads A",
+    squares: ["Cherry", "Onion", "Yellow Pepper"],
+    smalls: ["Carrot", "Cucumber"],
+  },
+  {
+    id: "6-squares",
+    type: "squares",
+    name: "Salads B",
+    squares: [
+      "Dried Tomatoes",
+      "Olives",
+      "Roast Pepper",
+      "Goat Cheese",
+      "Capers",
+      "Roast Courgette",
+    ],
+  },
+
+  {
+    id: "mixed-2x2-3smalls",
+    type: "mixed",
+    name: "Salads C",
+    squares: ["Chicken", "Spianata", "Spinach"],
+    smalls: ["Pinenuts"],
+  },
+];
+---
+
+<Layout>
+  <h1 class="text-3xl font-bold mb-6 text-center">🍕 Kitchen Layout</h1>
+
+  <div class="p-2 flex flex-col sm:justify-center sm:items-center">
+    <h2 class="text-xl font-semibold mb-2">Pizza</h2>
+    <div class="flex gap-2 overflow-x-auto pb-2 mb-6">
+      {
+        pizzaIngredients.map((ingredient) => (
+          <div class="flex-shrink-0 w-24 h-24 bg-blue-500 border border-blue-700 flex items-center justify-center text-white font-medium">
+            {ingredient}
+          </div>
+        ))
+      }
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-8 justify-center items-center mb-6">
+    {
+      bigContainers.map((container) =>
+        container.type === "mixed" ? (
+          <div class="flex flex-col items-center gap-2">
+            <h3 class="text-lg font-semibold text-white">{container.name}</h3>
+            <div class="bg-gray-800 border-2 border-gray-600 p-2 flex flex-col gap-2">
+              {/* 2 rows of squares */}
+              <div class="grid grid-cols-2 gap-2 flex-1">
+                {container.squares.map((square) => (
+                  <div class="bg-yellow-600 text-center border border-yellow-400 w-24 h-24 flex items-center justify-center text-white font-medium ">
+                    {square}
+                  </div>
+                ))}
+              </div>
+              {/* 1 row of smalls */}
+              <div class="grid grid-cols-3 gap-2 mt-auto">
+                {container.smalls.map((small) => (
+                  <div class="bg-red-600 border border-red-400 h-24 flex items-center justify-center text-white font-medium writing-vertical-rl text-center">
+                    {small}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div class="flex flex-col items-center gap-2">
+            <h3 class="text-lg font-semibold text-white">{container.name}</h3>
+            <div class="bg-gray-700 border-2 border-gray-600 p-2 w-fit grid grid-cols-2 gap-2">
+              {container.squares.map((square) => (
+                <div class="bg-yellow-600 border border-yellow-400 w-24 h-24 flex items-center justify-center text-center text-white font-medium">
+                  {square}
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      )
+    }
+  </div>
+</Layout>
