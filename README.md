@@ -1,51 +1,75 @@
-# Astro Starter Kit: Basics
+# Gustoso
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/3450f4e4-7208-44c8-9175-2bde6ac5d65e/deploy-status)](https://app.netlify.com/projects/gustoso-app/deploys)
 
+Recipe site built with Astro and Netlify.
 
-```sh
-npm create astro@latest -- --template basics
+## Commands
+
+Run these from the project root:
+
+- `npm install`
+- `npm run dev`
+- `npm run build`
+- `npm run preview`
+
+## Add a Recipe
+
+Recipes live in [src/content/recipes](/home/leog/repo/gustoso/src/content/recipes).
+
+Recommended process:
+
+1. Duplicate [src/content/recipes/_recipe-template.md](/home/leog/repo/gustoso/src/content/recipes/_recipe-template.md).
+2. Rename it with a slug such as `rosca-de-pascua-v2.md`.
+3. Fill in the frontmatter fields.
+4. Start the app with `npm run dev` and confirm the recipe appears on the homepage.
+
+Minimal example:
+
+```md
+---
+title: Energy balls
+published: true
+type: Snack
+serves: Serves 4
+parts:
+  - ingredients:
+      - dates
+      - oatmeal
+    instructions:
+      - step: 1
+        description: Mix everything
+---
 ```
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/basics)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/basics)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/basics/devcontainer.json)
+Supported fields:
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+- `title`
+- `published`
+- `type`
+- `serves`
+- `description`
+- `img`
+- `storage`
+- `parts`
 
-![just-the-basics](https://github.com/withastro/astro/assets/2244813/a0a5533c-a856-4198-8470-2d67b1d7c554)
+Each `part` can include:
 
-## 🚀 Project Structure
+- `name`
+- `ingredients`
+- `instructions`
 
-Inside of your Astro project, you'll see the following folders and files:
+Each instruction can be:
 
-```text
-/
-├── public/
-│   └── favicon.svg
-├── src/
-│   ├── layouts/
-│   │   └── Layout.astro
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+- numbered with `step`
+- or unnumbered with only `description`
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+## Suggested Workflow
 
-## 🧞 Commands
+Best options for adding recipes:
 
-All commands are run from the root of the project, from a terminal:
+- Paste recipe text directly and convert it into markdown.
+- Send screenshots and convert them manually.
+- Keep recipes in a note app with the same structure as the template.
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+For now, plain text is the fastest and most reliable option.
