@@ -1,12 +1,35 @@
-// // 1. Import utilities from `astro:content`
-// import { defineCollection, z } from 'astro:content';
+import { defineCollection, z } from "astro:content";
+import { glob } from "astro/loaders";
 
-// // 2. Import loader(s)
-// import { glob, file } from 'astro/loaders';
+const recipeStep = z.object({
+  step: z.number().optional(),
+  description: z.string(),
+}).passthrough();
 
-// // 3. Define your collection(s)
-// const blog = defineCollection({ /* ... */ });
-// const dogs = defineCollection({ /* ... */ });
+const recipePart = z.object({
+  name: z.string().optional(),
+  ingredients: z.array(z.string()).optional(),
+  instructions: z.array(recipeStep).optional(),
+  storage: z.string().optional(),
+}).passthrough();
 
-// // 4. Export a single `collections` object to register your collection(s)
-// export const collections = { blog, dogs };
+const recipes = defineCollection({
+  loader: glob({ pattern: "**/*.md", base: "./src/content/recipes" }),
+  schema: z.object({
+    title: z.string(),
+    published: z.boolean().optional(),
+    img: z.string().optional(),
+    type: z.string().optional(),
+    author: z.string().optional(),
+    serves: z.string().optional(),
+    storage: z.string().optional(),
+    description: z.string().optional(),
+    parts: z.array(recipePart).optional(),
+    ingredients: z.array(z.string()).optional(),
+    instructions: z.array(recipeStep).optional(),
+  }).passthrough(),
+});
+
+export const collections = {
+  recipes,
+};

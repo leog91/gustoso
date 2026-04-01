@@ -1,14 +1,12 @@
 ---
-import { getStaticPaths } from "../pages/recipes/[recipe].astro";
+import { getCollection } from "astro:content";
 
-const paths = getStaticPaths();
-
-const recipes = (await Astro.glob("../content/recipes/*.md"))
+const recipes = (await getCollection("recipes"))
   .map((r) => {
     return {
-      recipe: r.frontmatter,
-      url: r.file.split("/").pop()?.replace(".md", ""),
-      published: r.frontmatter.published,
+      recipe: r.data,
+      url: r.id,
+      published: r.data.published,
     };
   })
   .filter((r) => r.published !== false);

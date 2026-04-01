@@ -1,39 +1,12 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import leftArrow from "../../assets/left-arrow.svg";
+import { getCollection, render } from "astro:content";
 
 const { recipe } = Astro.params;
 
-export function getStaticPaths() {
-  return [
-    { params: { recipe: "energy-balls" } },
-    { params: { recipe: "chimi-clasico" } },
-    { params: { recipe: "crema-pastelera" } },
-    { params: { recipe: "pasta-frola" } },
-    { params: { recipe: "budin-de-banana" } },
-    { params: { recipe: "steps" } },
-    { params: { recipe: "example" } },
-    { params: { recipe: "cinnamon-rolls" } },
-    { params: { recipe: "torta-alemana" } },
-    { params: { recipe: "chipa" } },
-    { params: { recipe: "rosca-de-pascua" } },
-    { params: { recipe: "caesar-dressing" } },
-    { params: { recipe: "goat-cheese-salad" } },
-    { params: { recipe: "burrata-e-prosciutto" } },
-    { params: { recipe: "smashed-avocado" } },
-    { params: { recipe: "budin-crema" } },
-    { params: { recipe: "quiche" } },
-    { params: { recipe: "basil-oil" } },
-    { params: { recipe: "pistachio-profiterole" } },
-    { params: { recipe: "goat-cheese-salad-2025" } },
-    { params: { recipe: "grilled-chicken-caesar" } },
-    { params: { recipe: "burrata-roasted-tomatoes" } },
-    { params: { recipe: "pizza-mortadella-pistachio" } },
-  ];
-}
-
 export interface RecipeStep {
-  step: number;
+  step?: number;
   description: string;
 }
 
@@ -44,8 +17,8 @@ interface RecipePart {
 }
 
 export interface Recipe {
-  url: string;
-  frontmatter: {
+  id: string;
+  data: {
     title: string;
     img?: string;
     type?: string;
@@ -57,11 +30,13 @@ export interface Recipe {
   };
 }
 
-const recipes = await Astro.glob("../../content/recipes/*.md");
+const recipes = await getCollection("recipes");
 
 const currentRecipe = recipes.find(
-  (post) => post.file.split("/").pop()?.replace(".md", "") === recipe
+  (post) => post.id === recipe
 );
+
+const renderedRecipe = currentRecipe ? await render(currentRecipe) : null;
 ---
 
 <Layout>
@@ -80,10 +55,10 @@ const currentRecipe = recipes.find(
       {
         currentRecipe && (
           <div class="p-4 ">
-            {currentRecipe.frontmatter.img && (
+            {currentRecipe.data.img && (
               <div class="flex justify-center mb-4">
                 <img
-                  src={currentRecipe.frontmatter.img}
+                  src={currentRecipe.data.img}
                   class="w-full  aspect-auto rounded-xl "
                 />
               </div>
@@ -91,26 +66,26 @@ const currentRecipe = recipes.find(
              
             <div class="flex items-center justify-between">
               <h1 class=" mb-4 font-semibold text-2xl">
-                {currentRecipe.frontmatter.title}
+                {currentRecipe.data.title}
               </h1>
               <div>
-                {currentRecipe.frontmatter.type && (
+                {currentRecipe.data.type && (
                   <div class="bg-stone-500 text-white rounded-xl px-2 ">
-                    {currentRecipe.frontmatter.type}
+                    {currentRecipe.data.type}
                   </div>
                 )}
               </div>
             </div>
-            {currentRecipe.frontmatter.serves && (
-              <p class="text-stone-500"> {currentRecipe.frontmatter.serves}</p>
+            {currentRecipe.data.serves && (
+              <p class="text-stone-500"> {currentRecipe.data.serves}</p>
             )}
 
-            {currentRecipe.frontmatter.description && (
-              <div> {currentRecipe.frontmatter.description}</div>
+            {currentRecipe.data.description && (
+              <div> {currentRecipe.data.description}</div>
             )}
 
-            {currentRecipe.frontmatter.parts &&
-              currentRecipe.frontmatter.parts.map((p: RecipePart, i:number) => (
+            {currentRecipe.data.parts &&
+              currentRecipe.data.parts.map((p: RecipePart, i:number) => (
                 <div class={`mb-4 pt-2 ${i===0?"border-t-0":"border-t-2"}`}>                
                   {p.name && 
                   <h2 class="font-semibold text-xl mb-1">{p.name}</h2>
@@ -128,8 +103,8 @@ const currentRecipe = recipes.find(
                   <ol>
                     {p.instructions?.map((ins) => (
                       <li class="pl-2">
-                        {" "}
-                        {ins.step} - {ins.description}
+                        {ins.step ? `${ins.step} - ` : ""}
+                        {ins.description}
                       </li>
                     ))}
                   </ol> 
@@ -138,15 +113,15 @@ const currentRecipe = recipes.find(
               ))}
 
             
-            {currentRecipe.frontmatter.storage && (
+            {currentRecipe.data.storage && (
               <>
                 <h2 class="font-semibold">Storage:</h2>
 
-                {currentRecipe.frontmatter.storage}
+                {currentRecipe.data.storage}
               </>
             )}
             <div class="content">
-              <currentRecipe.Content />
+              {renderedRecipe && <renderedRecipe.Content />}
             </div>
           </div>
         )
