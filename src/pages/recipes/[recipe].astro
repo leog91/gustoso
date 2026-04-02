@@ -37,95 +37,259 @@ const currentRecipe = recipes.find(
 );
 
 const renderedRecipe = currentRecipe ? await render(currentRecipe) : null;
+const hasMarkdownNotes = Boolean(currentRecipe?.body?.trim());
+const capitalizeFirst = (value: string) =>
+  value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 ---
 
 <Layout>
-  <div
-    class="flex flex-col bg-white text-neutral-900 max-w-2xl m-auto min-h-dvh "
-  >
-    <div class="flex mt-4 ml-4 mb-8 relative">
-      <div class="text-center absolute font-semibold text-xl w-full max-w-2xl">
-        {recipe}
-      </div>
-      <a href={`/`} class="absolute">
-        <img src={leftArrow.src} alt="image description" />
-      </a>
-    </div>
-    <div>
-      {
-        currentRecipe && (
-          <div class="p-4 ">
-            {currentRecipe.data.img && (
-              <div class="flex justify-center mb-4">
-                <img
-                  src={currentRecipe.data.img}
-                  class="w-full  aspect-auto rounded-xl "
-                />
-              </div>
-            )}
-             
-            <div class="flex items-center justify-between">
-              <h1 class=" mb-4 font-semibold text-2xl">
-                {currentRecipe.data.title}
-              </h1>
-              <div>
-                {currentRecipe.data.type && (
-                  <div class="bg-stone-500 text-white rounded-xl px-2 ">
-                    {currentRecipe.data.type}
-                  </div>
-                )}
+  {
+    currentRecipe ? (
+      <div class="min-h-dvh bg-white text-black">
+        <article class="mx-auto max-w-6xl border-x border-neutral-200 bg-white">
+          <header class="border-b border-neutral-200">
+            <div class="flex items-center justify-between px-4 py-3 sm:px-6">
+              <a
+                href="/"
+                class="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-black transition hover:text-[#C0392B]"
+              >
+                <img src={leftArrow.src} alt="Back to recipes" class="h-3.5 w-3.5" />
+                Recipe Index
+              </a>
+              <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-black">
+                Gustoso
               </div>
             </div>
-            {currentRecipe.data.serves && (
-              <p class="text-stone-500"> {currentRecipe.data.serves}</p>
-            )}
 
-            {currentRecipe.data.description && (
-              <div> {currentRecipe.data.description}</div>
-            )}
-
-            {currentRecipe.data.parts &&
-              currentRecipe.data.parts.map((p: RecipePart, i:number) => (
-                <div class={`mb-4 pt-2 ${i===0?"border-t-0":"border-t-2"}`}>                
-                  {p.name && 
-                  <h2 class="font-semibold text-xl mb-1">{p.name}</h2>
-                  }
-                  {p.ingredients &&
-                  <h2 class="font-semibold">Ingredients:</h2>
-                  <ol>
-                    {p.ingredients?.map((i) => (
-                      <li class="pl-2"> • {i}</li>
-                    ))}
-                  </ol>
-                  }
-                  {p.instructions &&
-                   <h2 class="font-semibold">Instructions:</h2>
-                  <ol>
-                    {p.instructions?.map((ins) => (
-                      <li class="pl-2">
-                        {ins.step ? `${ins.step} - ` : ""}
-                        {ins.description}
-                      </li>
-                    ))}
-                  </ol> 
-                  }                  
+            <div class="grid border-t border-neutral-200 lg:grid-cols-[1.15fr_0.85fr]">
+              {currentRecipe.data.img ? (
+                <div class="border-b border-neutral-200 lg:border-b-0 lg:border-r lg:border-neutral-200">
+                  <img
+                    src={currentRecipe.data.img}
+                    alt={currentRecipe.data.title}
+                    class="h-[260px] w-full object-cover sm:h-[360px] lg:h-full"
+                  />
                 </div>
-              ))}
+              ) : (
+                <div class="flex min-h-[260px] flex-col justify-between border-b border-neutral-200 bg-[#F5F5F5] p-6 sm:min-h-[360px] lg:border-b-0 lg:border-r lg:border-neutral-200">
+                  <div class="flex items-start justify-between gap-4 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
+                    <span>Archive / Visual Missing</span>
+                    <span>{recipe}</span>
+                  </div>
+                  <div class="py-8">
+                    <div class="max-w-md text-4xl font-black uppercase leading-none tracking-[-0.06em] text-black sm:text-6xl">
+                      {currentRecipe.data.title}
+                    </div>
+                    <div class="mt-6 h-px w-16 bg-black"></div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-4 border-t border-neutral-200 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
+                    <div>
+                      <div>Category</div>
+                      <div class="mt-1 text-sm text-black">
+                        {currentRecipe.data.type ?? "Recipe"}
+                      </div>
+                    </div>
+                    <div>
+                      <div>Sections</div>
+                      <div class="mt-1 text-sm text-black">
+                        {currentRecipe.data.parts?.length ?? 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-            
-            {currentRecipe.data.storage && (
-              <>
-                <h2 class="font-semibold">Storage:</h2>
+              <div class="flex flex-col justify-between px-4 py-5 sm:px-6 sm:py-6">
+                <div>
+                  <div class="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-500">
+                    <span>Cat: {currentRecipe.data.type ?? "Recipe"}</span>
+                    <span>File: /{recipe}</span>
+                  </div>
+                  {currentRecipe.data.img && (
+                    <h1 class="mt-5 max-w-lg text-4xl font-black uppercase leading-none tracking-[-0.05em] text-black sm:text-5xl">
+                      {currentRecipe.data.title}
+                    </h1>
+                  )}
+                  {currentRecipe.data.description && (
+                    <p class="mt-5 max-w-md text-sm leading-6 text-neutral-700">
+                      {currentRecipe.data.description}
+                    </p>
+                  )}
+                </div>
 
-                {currentRecipe.data.storage}
-              </>
-            )}
-            <div class="content">
-              {renderedRecipe && <renderedRecipe.Content />}
+                <div class="mt-8 border-t border-neutral-200 pt-4">
+                  {(currentRecipe.data.serves || currentRecipe.data.parts?.length) && (
+                    <div class="grid grid-cols-2 gap-4">
+                      {currentRecipe.data.serves && (
+                        <div>
+                          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">
+                            Yield
+                          </div>
+                          <div class="mt-1 text-2xl font-black uppercase leading-none">
+                            {currentRecipe.data.serves}
+                          </div>
+                        </div>
+                      )}
+                      {currentRecipe.data.parts?.length ? (
+                        <div>
+                          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">
+                            Sections
+                          </div>
+                          <div class="mt-1 text-2xl font-black uppercase leading-none">
+                            {currentRecipe.data.parts.length}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
+          </header>
+
+          <div class="px-4 py-6 sm:px-6 sm:py-8">
+            {currentRecipe.data.parts && currentRecipe.data.parts.length > 0 && (
+              <section class="space-y-8">
+                {currentRecipe.data.parts.map((p: RecipePart, i: number) => {
+                  const hasIngredients = Boolean(p.ingredients && p.ingredients.length > 0);
+                  const hasInstructions = Boolean(p.instructions && p.instructions.length > 0);
+
+                  if (!hasIngredients && !hasInstructions) {
+                    return null;
+                  }
+
+                  return (
+                    <section class="border-t border-neutral-200 pt-4">
+                      <div class="mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-black">
+                        {`0${i + 1}`.slice(-2)}_{p.name?.replace(/\s+/g, "_").toUpperCase() ?? `SECTION_${i + 1}`}
+                      </div>
+
+                      <div class:list={["grid gap-8", hasIngredients && hasInstructions ? "lg:grid-cols-[0.9fr_1.1fr]" : "grid-cols-1"]}>
+                        {hasIngredients && (
+                          <div>
+                            <div class="border-t border-black pt-3">
+                              <h2 class="text-[13px] font-bold uppercase tracking-[0.14em] text-black">
+                                Ingredients
+                              </h2>
+                            </div>
+                            <ul class="mt-4 divide-y divide-neutral-200 border-y border-neutral-200">
+                              {p.ingredients?.map((ingredient) => {
+                                const quantityMatch = ingredient.match(/^((?:\+?\d[\d\s.,/-]*|½|¼|¾|\[Opcional\]|\(?\+?\d[\d\s.,/-]*)(?:\s*[a-zA-Z%°]+(?:\s+[a-zA-Z%°]+)*)?)(?:\s+de\s+|\s+)(.+)$/u);
+                                const ingredientQty = quantityMatch ? quantityMatch[1].trim() : "";
+                                const ingredientName = quantityMatch ? quantityMatch[2].trim() : ingredient;
+
+                                return (
+                                  <li class="grid grid-cols-[1fr_auto] gap-4 py-3 text-sm leading-5">
+                                    <span class="pr-4 text-black">{capitalizeFirst(ingredientName)}</span>
+                                    <span class="text-right text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500">
+                                      {ingredientQty}
+                                    </span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        )}
+
+                        {hasInstructions && (
+                          <div>
+                            <div class="border-t border-black pt-3">
+                              <h2 class="text-[13px] font-bold uppercase tracking-[0.14em] text-black">
+                                Steps
+                              </h2>
+                            </div>
+                            <ol class="mt-4 space-y-6">
+                              {p.instructions?.map((ins, stepIndex) => (
+                                <li class="relative border-t border-neutral-200 pt-4 pl-20">
+                                  <span class="pointer-events-none absolute left-0 top-1 text-5xl font-black leading-none tracking-[-0.08em] text-neutral-200">
+                                    {String(ins.step ?? stepIndex + 1).padStart(2, "0")}
+                                  </span>
+                                  <p class="max-w-xl text-sm leading-6 text-black">
+                                    {ins.description}
+                                  </p>
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  );
+                })}
+              </section>
+            )}
+
+            {(currentRecipe.data.storage || hasMarkdownNotes) && (
+              <section class="mt-10 border-t border-neutral-200 pt-5">
+                <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+                  <div>
+                    {currentRecipe.data.storage && (
+                      <div class="border-l-2 border-black pl-4">
+                        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">
+                          Chef Note
+                        </div>
+                        <p class="mt-2 text-sm italic leading-6 text-neutral-700">
+                          {currentRecipe.data.storage}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {renderedRecipe && hasMarkdownNotes && (
+                    <div class="recipe-content border-t border-black pt-3">
+                      <h2 class="text-[13px] font-bold uppercase tracking-[0.14em] text-black">
+                        Notes
+                      </h2>
+                      <div class="mt-4 text-sm leading-6 text-black">
+                        <renderedRecipe.Content />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
           </div>
-        )
-      }
-    </div>
-  </div>
+        </article>
+      </div>
+    ) : (
+      <div class="mx-auto flex min-h-dvh max-w-2xl items-center justify-center bg-white px-6 py-12">
+        <div class="w-full border border-neutral-200 bg-white p-8 text-center text-black">
+          <h1 class="text-2xl font-black uppercase">Recipe not found</h1>
+          <p class="mt-3 text-neutral-600">
+            We couldn't find a recipe for "{recipe}".
+          </p>
+          <a
+            href="/"
+            class="mt-6 inline-flex border border-black bg-black px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white transition hover:border-[#C0392B] hover:bg-[#C0392B]"
+          >
+            Go back home
+          </a>
+        </div>
+      </div>
+    )
+  }
 </Layout>
+
+<style>
+  :global(body) {
+    font-family: Inter, Helvetica, Arial, sans-serif;
+  }
+
+  .recipe-content :global(p) {
+    margin-top: 0.75rem;
+  }
+
+  .recipe-content :global(ul),
+  .recipe-content :global(ol) {
+    margin-top: 0.75rem;
+    padding-left: 1rem;
+  }
+
+  .recipe-content :global(li) {
+    margin-top: 0.35rem;
+  }
+
+  .recipe-content :global(a) {
+    color: #c0392b;
+  }
+</style>
