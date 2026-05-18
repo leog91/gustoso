@@ -250,9 +250,11 @@ const recipeJsonLd = currentRecipe
                                 return (
                                   <li class="grid grid-cols-[1fr_auto] gap-4 py-3 text-sm leading-5">
                                     <span class="pr-4 text-black">{capitalizeFirst(ingredientName)}</span>
-                                    <span class="text-right text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500">
-                                      {ingredientQty}
-                                    </span>
+                                    {ingredientQty ? (
+                                      <span class="text-right text-[11px] font-medium uppercase tracking-[0.08em] text-neutral-500">
+                                        {ingredientQty}
+                                      </span>
+                                    ) : null}
                                   </li>
                                 );
                               })}
