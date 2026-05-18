@@ -2,34 +2,10 @@
 import Layout from "../../layouts/Layout.astro";
 import leftArrow from "../../assets/left-arrow.svg";
 import { getCollection, render } from "astro:content";
+import type { Recipe, RecipePart } from "../../types";
 
 const isDev = import.meta.env.DEV;
 const { recipe } = Astro.params;
-
-export interface RecipeStep {
-  step?: number;
-  description: string;
-}
-
-interface RecipePart {
-  name?:string
-  ingredients?: string[];
-  instructions?: RecipeStep[];
-}
-
-export interface Recipe {
-  id: string;
-  data: {
-    title: string;
-    img?: string;
-    type?: string;
-    author?: string;
-    serves?: string;
-    storage?: string;
-    description?: string;
-    parts: RecipePart[];
-  };
-}
 
 const recipes = await getCollection("recipes");
 
