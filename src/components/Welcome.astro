@@ -1,6 +1,8 @@
 ---
 import { getCollection } from "astro:content";
 
+const isDev = import.meta.env.DEV;
+
 const recipes = (await getCollection("recipes"))
   .map((r) => {
     return {
@@ -9,7 +11,8 @@ const recipes = (await getCollection("recipes"))
       published: r.data.published,
     };
   })
-  .filter((r) => r.published !== false);
+  .filter((r) => r.published !== false)
+  .filter((r) => isDev || !r.recipe.needsReview);
 ---
 
 <div>
@@ -18,23 +21,86 @@ const recipes = (await getCollection("recipes"))
       <div class="flex flex-col items-center border-t-2 justify-center">
         {
           recipes.map((r) => (
-            <a
-              href={`/recipes/${r.url}`}
-              class="font-semibold my-0.5 space-y-0.5 border-b-2 hover:bg-neutral-700 flex justify-between p-2 w-full "
+            <div
+              class={`font-semibold my-0.5 space-y-0.5 border-b-2 hover:bg-neutral-700 flex justify-between p-2 w-full ${r.recipe.needsReview ? "bg-yellow-900/20 border-l-4 border-l-yellow-500" : ""}`}
             >
-              {r.recipe.title}
+              <a
+                href={`/recipes/${r.url}`}
+                class="flex items-center gap-2 flex-1 min-w-0"
+              >
+                {r.recipe.needsReview ? (
+                  <span class="inline-block w-2 h-2 rounded-full bg-yellow-500 shrink-0" title="Needs review" />
+                ) : null}
+                <span class="truncate">{r.recipe.title}</span>
+              </a>
 
-              {r.recipe.type ? (
-                <div class="border-transparent bg-red-500 text-white px-2 text-sm flex items-center rounded-3xl">
-                  {r.recipe.type}
-                </div>
-              ) : null}
-            </a>
+              <div class="flex gap-1.5 items-center shrink-0">
+                {isDev && r.recipe.needsReview ? (
+                  <>
+                    <button
+                      data-slug={r.url}
+                      data-action="approve"
+                      class="cursor-pointer bg-green-600 hover:bg-green-500 text-white px-2 py-0.5 text-xs rounded-3xl transition"
+                      title="Approve — remove needsReview"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      data-slug={r.url}
+                      data-action="discard"
+                      class="cursor-pointer bg-red-600 hover:bg-red-500 text-white px-2 py-0.5 text-xs rounded-3xl transition"
+                      title="Discard — move to trash"
+                    >
+                      🗑️
+                    </button>
+                  </>
+                ) : null}
+                {r.recipe.needsReview ? (
+                  <div class="border-transparent bg-yellow-600 text-white px-2 text-sm flex items-center rounded-3xl">
+                    check
+                  </div>
+                ) : null}
+                {r.recipe.type ? (
+                  <div class="border-transparent bg-red-500 text-white px-2 text-sm flex items-center rounded-3xl">
+                    {r.recipe.type}
+                  </div>
+                ) : null}
+              </div>
+            </div>
           ))
         }
       </div>
     </div>
   </main>
 </div>
+
+<script>
+  import { actions } from "astro:actions";
+
+  // Only attach handlers if there are dev-action buttons present
+  document.addEventListener("click", async (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-action]");
+    if (!btn) return;
+
+    const slug = btn.dataset.slug;
+    const action = btn.dataset.action;
+    if (!slug || !action) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      if (action === "discard") {
+        await actions.discardRecipe({ slug });
+      } else if (action === "approve") {
+        await actions.removeNeedsReview({ slug });
+      }
+      window.location.reload();
+    } catch (err: any) {
+      console.error("Action failed:", err);
+      alert(err.message || "Action failed");
+    }
+  });
+</script>
 
 <style></style>

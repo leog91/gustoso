@@ -3,8 +3,7 @@ import Search from "../components/Search.astro";
 import Welcome from "../components/Welcome.astro";
 import Layout from "../layouts/Layout.astro";
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const isDev = import.meta.env.DEV;
 ---
 
 <Layout>
@@ -13,8 +12,16 @@ import Layout from "../layouts/Layout.astro";
     <div class="flex flex-col mx-2 justify-center items-center w-full">
       <Search />
     </div>
+    {isDev ? (
+      <a
+        href="/dev/trash"
+        class="mr-4 text-sm text-yellow-400 hover:text-yellow-300 transition shrink-0"
+        title="View discarded recipes"
+      >
+        🗑️ Trash
+      </a>
+    ) : null}
   </div>
 
   <Welcome />
-  <!-- <dialog id="results" class="inset-1/2" open>asd</dialog> -->
 </Layout>

@@ -3,6 +3,7 @@ import Layout from "../../layouts/Layout.astro";
 import leftArrow from "../../assets/left-arrow.svg";
 import { getCollection, render } from "astro:content";
 
+const isDev = import.meta.env.DEV;
 const { recipe } = Astro.params;
 
 export interface RecipeStep {
@@ -32,9 +33,14 @@ export interface Recipe {
 
 const recipes = await getCollection("recipes");
 
-const currentRecipe = recipes.find(
+let currentRecipe = recipes.find(
   (post) => post.id === recipe
 );
+
+// In production, needsReview recipes should 404
+if (!isDev && currentRecipe?.data.needsReview) {
+  currentRecipe = undefined;
+}
 
 const renderedRecipe = currentRecipe ? await render(currentRecipe) : null;
 const hasMarkdownNotes = Boolean(currentRecipe?.body?.trim());
@@ -56,8 +62,28 @@ const capitalizeFirst = (value: string) =>
                 <img src={leftArrow.src} alt="Back to recipes" class="h-3.5 w-3.5" />
                 Recipe Index
               </a>
-              <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-black">
-                Gustoso
+              <div class="flex items-center gap-2">
+                {isDev && currentRecipe.data.needsReview ? (
+                  <>
+                    <button
+                      data-slug={recipe}
+                      data-action="approve"
+                      class="cursor-pointer border border-green-600 bg-green-600 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white transition hover:bg-white hover:text-green-600"
+                    >
+                      ✓ Approve
+                    </button>
+                    <button
+                      data-slug={recipe}
+                      data-action="discard"
+                      class="cursor-pointer border border-red-600 bg-red-600 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white transition hover:bg-white hover:text-red-600"
+                    >
+                      🗑️ Discard
+                    </button>
+                  </>
+                ) : null}
+                <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-black">
+                  Gustoso
+                </div>
               </div>
             </div>
 
@@ -269,6 +295,35 @@ const capitalizeFirst = (value: string) =>
     )
   }
 </Layout>
+
+<script>
+  import { actions } from "astro:actions";
+
+  document.addEventListener("click", async (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-action]");
+    if (!btn) return;
+
+    const slug = btn.dataset.slug;
+    const action = btn.dataset.action;
+    if (!slug || !action) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      if (action === "discard") {
+        await actions.discardRecipe({ slug });
+        window.location.href = "/";
+      } else if (action === "approve") {
+        await actions.removeNeedsReview({ slug });
+        window.location.reload();
+      }
+    } catch (err: any) {
+      console.error("Action failed:", err);
+      alert(err.message || "Action failed");
+    }
+  });
+</script>
 
 <style>
   :global(body) {

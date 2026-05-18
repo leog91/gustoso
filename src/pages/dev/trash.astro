@@ -1,0 +1,101 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import fs from "fs";
+import path from "path";
+
+const isDev = import.meta.env.DEV;
+const trashDir = path.resolve(process.cwd(), ".trash");
+
+interface TrashedRecipe {
+  slug: string;
+  title: string;
+}
+
+let trashed: TrashedRecipe[] = [];
+
+if (isDev && fs.existsSync(trashDir)) {
+  const files = fs.readdirSync(trashDir).filter((f) => f.endsWith(".md"));
+  trashed = files.map((file) => {
+    const slug = file.replace(".md", "");
+    const content = fs.readFileSync(path.join(trashDir, file), "utf-8");
+    const titleMatch = content.match(/title:\s*(.+)/);
+    const title = titleMatch ? titleMatch[1].trim() : slug;
+    return { slug, title };
+  });
+}
+---
+
+<Layout>
+  <div class="min-h-dvh bg-neutral-900 text-gray-100">
+    <div class="flex flex-col bg-neutral-800 max-w-2xl m-auto min-h-dvh">
+      <div class="flex items-center justify-between px-4 py-4 border-b-2 border-neutral-700">
+        <h1 class="text-2xl font-bold">Trashed Recipes</h1>
+        <a
+          href="/"
+          class="text-sm text-neutral-400 hover:text-white transition"
+        >
+          ← Back to index
+        </a>
+      </div>
+
+      {!isDev ? (
+        <div class="p-6 text-center text-red-400">
+          <p class="text-lg font-semibold">Dev only</p>
+          <p class="mt-2 text-neutral-400">This page is only available in development mode.</p>
+          <a
+            href="/"
+            class="mt-4 inline-block border border-neutral-600 bg-neutral-700 px-4 py-2 text-sm font-bold uppercase tracking-wider text-white transition hover:bg-neutral-600"
+          >
+            Go back home
+          </a>
+        </div>
+      ) : trashed.length === 0 ? (
+        <div class="p-6 text-center text-neutral-400">
+          <p class="text-lg">No trashed recipes.</p>
+          <p class="mt-2 text-sm">Discarded recipes will appear here.</p>
+        </div>
+      ) : (
+        <div class="flex flex-col">
+          {trashed.map((r) => (
+            <div class="flex items-center justify-between p-3 border-b border-neutral-700 hover:bg-neutral-700 transition">
+              <div class="flex flex-col min-w-0">
+                <span class="font-semibold truncate">{r.title}</span>
+                <span class="text-xs text-neutral-500">{r.slug}.md</span>
+              </div>
+              <button
+                data-slug={r.slug}
+                data-action="restore"
+                class="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 text-xs rounded-3xl transition shrink-0 ml-2"
+              >
+                Restore
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { actions } from "astro:actions";
+
+  document.addEventListener("click", async (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-action]");
+    if (!btn) return;
+
+    const slug = btn.dataset.slug;
+    const action = btn.dataset.action;
+    if (!slug || action !== "restore") return;
+
+    e.preventDefault();
+
+    try {
+      await actions.restoreRecipe({ slug });
+      window.location.reload();
+    } catch (err: any) {
+      console.error("Restore failed:", err);
+      alert(err.message || "Restore failed");
+    }
+  });
+</script>
