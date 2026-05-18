@@ -4,6 +4,7 @@ import search from "../assets/search.svg";
 
 <div class="absolute sm:w-9/12 top-1.5 flex flex-col">
   <form
+    id="search-form"
     class="max-w-96 m-auto p-1 bg-neutral-700 rounded-full flex items-center justify-between w-full"
   >
     <input
@@ -37,7 +38,7 @@ import search from "../assets/search.svg";
 <script>
   import { actions } from "astro:actions";
 
-  const form = document.querySelector("form");
+  const form = document.getElementById("search-form");
   const input = document.getElementById("search") as HTMLInputElement | null;
   const resultsWrapper = document.getElementById("results");
   const resultsList = document.getElementById("results-list");
