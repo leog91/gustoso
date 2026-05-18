@@ -46,9 +46,50 @@ const renderedRecipe = currentRecipe ? await render(currentRecipe) : null;
 const hasMarkdownNotes = Boolean(currentRecipe?.body?.trim());
 const capitalizeFirst = (value: string) =>
   value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+
+const pageTitle = currentRecipe
+  ? `${currentRecipe.data.title} | Gustoso`
+  : "Recipe Not Found | Gustoso";
+const pageDescription = currentRecipe?.data.description ?? (currentRecipe ? `Recipe for ${currentRecipe.data.title}.` : "We couldn't find that recipe.");
+
+const recipeJsonLd = currentRecipe
+  ? {
+      "@context": "https://schema.org",
+      "@type": "Recipe",
+      name: currentRecipe.data.title,
+      description: currentRecipe.data.description,
+      ...(currentRecipe.data.author ? { author: { "@type": "Person", name: currentRecipe.data.author } } : {}),
+      ...(currentRecipe.data.img ? { image: currentRecipe.data.img } : {}),
+      ...(currentRecipe.data.serves ? { recipeYield: currentRecipe.data.serves } : {}),
+      recipeIngredient: currentRecipe.data.parts?.flatMap((p) => p.ingredients || []) || [],
+      recipeInstructions:
+        currentRecipe.data.parts?.flatMap((p) =>
+          (p.instructions || []).map((ins) => ({
+            "@type": "HowToStep",
+            text: ins.description,
+            ...(ins.step ? { position: ins.step } : {}),
+          }))
+        ) || [],
+    }
+  : null;
 ---
 
-<Layout>
+<Layout title={pageTitle} description={pageDescription}>
+  {currentRecipe && recipeJsonLd && (
+    <Fragment slot="head">
+      <meta property="og:type" content="article" />
+      <meta property="og:title" content={currentRecipe.data.title} />
+      <meta
+        property="og:description"
+        content={currentRecipe.data.description || `Recipe for ${currentRecipe.data.title}.`}
+      />
+      <script
+        type="application/ld+json"
+        is:inline
+        set:html={JSON.stringify(recipeJsonLd)}
+      />
+    </Fragment>
+  )}
   {
     currentRecipe ? (
       <div class="min-h-dvh bg-white text-black">
