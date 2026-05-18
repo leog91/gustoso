@@ -42,40 +42,40 @@ if (!isDev && currentRecipe?.data.needsReview) {
   currentRecipe = undefined;
 }
 
-const renderedRecipe = currentRecipe ? await render(currentRecipe) : null;
-const hasMarkdownNotes = Boolean(currentRecipe?.body?.trim());
+if (!currentRecipe) {
+  return new Response(null, { status: 404 });
+}
+
+const renderedRecipe = await render(currentRecipe);
+const hasMarkdownNotes = Boolean(currentRecipe.body?.trim());
 const capitalizeFirst = (value: string) =>
   value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 
-const pageTitle = currentRecipe
-  ? `${currentRecipe.data.title} | Gustoso`
-  : "Recipe Not Found | Gustoso";
-const pageDescription = currentRecipe?.data.description ?? (currentRecipe ? `Recipe for ${currentRecipe.data.title}.` : "We couldn't find that recipe.");
+const pageTitle = `${currentRecipe.data.title} | Gustoso`;
+const pageDescription = currentRecipe.data.description ?? `Recipe for ${currentRecipe.data.title}.`;
 
-const recipeJsonLd = currentRecipe
-  ? {
-      "@context": "https://schema.org",
-      "@type": "Recipe",
-      name: currentRecipe.data.title,
-      description: currentRecipe.data.description,
-      ...(currentRecipe.data.author ? { author: { "@type": "Person", name: currentRecipe.data.author } } : {}),
-      ...(currentRecipe.data.img ? { image: currentRecipe.data.img } : {}),
-      ...(currentRecipe.data.serves ? { recipeYield: currentRecipe.data.serves } : {}),
-      recipeIngredient: currentRecipe.data.parts?.flatMap((p) => p.ingredients || []) || [],
-      recipeInstructions:
-        currentRecipe.data.parts?.flatMap((p) =>
-          (p.instructions || []).map((ins) => ({
-            "@type": "HowToStep",
-            text: ins.description,
-            ...(ins.step ? { position: ins.step } : {}),
-          }))
-        ) || [],
-    }
-  : null;
+const recipeJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Recipe",
+  name: currentRecipe.data.title,
+  description: currentRecipe.data.description,
+  ...(currentRecipe.data.author ? { author: { "@type": "Person", name: currentRecipe.data.author } } : {}),
+  ...(currentRecipe.data.img ? { image: currentRecipe.data.img } : {}),
+  ...(currentRecipe.data.serves ? { recipeYield: currentRecipe.data.serves } : {}),
+  recipeIngredient: currentRecipe.data.parts?.flatMap((p) => p.ingredients || []) || [],
+  recipeInstructions:
+    currentRecipe.data.parts?.flatMap((p) =>
+      (p.instructions || []).map((ins) => ({
+        "@type": "HowToStep",
+        text: ins.description,
+        ...(ins.step ? { position: ins.step } : {}),
+      }))
+    ) || [],
+};
 ---
 
 <Layout title={pageTitle} description={pageDescription}>
-  {currentRecipe && recipeJsonLd && (
+  {recipeJsonLd && (
     <Fragment slot="head">
       <meta property="og:type" content="article" />
       <meta property="og:title" content={currentRecipe.data.title} />
@@ -90,10 +90,8 @@ const recipeJsonLd = currentRecipe
       />
     </Fragment>
   )}
-  {
-    currentRecipe ? (
-      <div class="min-h-dvh bg-white text-black">
-        <article class="mx-auto max-w-6xl border-x border-neutral-200 bg-white">
+  <div class="min-h-dvh bg-white text-black">
+    <article class="mx-auto max-w-6xl border-x border-neutral-200 bg-white">
           <header class="border-b border-neutral-200">
             <div class="flex items-center justify-between px-4 py-3 sm:px-6">
               <a
@@ -320,25 +318,8 @@ const recipeJsonLd = currentRecipe
               </section>
             )}
           </div>
-        </article>
-      </div>
-    ) : (
-      <div class="mx-auto flex min-h-dvh max-w-2xl items-center justify-center bg-white px-6 py-12">
-        <div class="w-full border border-neutral-200 bg-white p-8 text-center text-black">
-          <h1 class="text-2xl font-black uppercase">Recipe not found</h1>
-          <p class="mt-3 text-neutral-600">
-            We couldn't find a recipe for "{recipe}".
-          </p>
-          <a
-            href="/"
-            class="mt-6 inline-flex border border-black bg-black px-4 py-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white transition hover:border-[#C0392B] hover:bg-[#C0392B]"
-          >
-            Go back home
-          </a>
-        </div>
-      </div>
-    )
-  }
+    </article>
+  </div>
 </Layout>
 
 <script>
