@@ -29,7 +29,7 @@ const recipes = (await getCollection("recipes"))
                 class="flex items-center gap-2 flex-1 min-w-0"
               >
                 {r.recipe.needsReview ? (
-                  <span class="inline-block w-2 h-2 rounded-full bg-yellow-500 shrink-0" title="Needs review" />
+                  <span class="inline-block w-2 h-2 rounded-full bg-yellow-500 shrink-0" title="Needs review"></span>
                 ) : null}
                 <span class="truncate">{r.recipe.title}</span>
               </a>
