@@ -116,8 +116,7 @@ const recipeJsonLd = {
               ) : (
                 <div class="flex min-h-[260px] flex-col justify-between border-b border-neutral-200 bg-[#F5F5F5] p-6 sm:min-h-[360px] lg:border-b-0 lg:border-r lg:border-neutral-200">
                   <div class="flex items-start justify-between gap-4 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
-                    <span>Archive / Visual Missing</span>
-                    <span>{recipe}</span>
+                    <span>Gustoso</span>
                   </div>
                   <div class="py-8">
                     <div class="max-w-md text-4xl font-black uppercase leading-none tracking-[-0.06em] text-black sm:text-6xl">
@@ -125,28 +124,23 @@ const recipeJsonLd = {
                     </div>
                     <div class="mt-6 h-px w-16 bg-black"></div>
                   </div>
-                  <div class="grid grid-cols-2 gap-4 border-t border-neutral-200 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
-                    <div>
-                      <div>Category</div>
-                      <div class="mt-1 text-sm text-black">
-                        {currentRecipe.data.type ?? "Recipe"}
+                  {currentRecipe.data.type && (
+                    <div class="border-t border-neutral-200 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
+                      <div>
+                        <div>Category</div>
+                        <div class="mt-1 text-sm text-black">
+                         {currentRecipe.data.type}
+                       </div>
                       </div>
                     </div>
-                    <div>
-                      <div>Sections</div>
-                      <div class="mt-1 text-sm text-black">
-                        {currentRecipe.data.parts?.length ?? 0}
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
 
               <div class="flex flex-col justify-between px-4 py-5 sm:px-6 sm:py-6">
                 <div>
                   <div class="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-500">
-                    <span>Cat: {currentRecipe.data.type ?? "Recipe"}</span>
-                    <span>File: /{recipe}</span>
+                    {currentRecipe.data.type && <span>{currentRecipe.data.type}</span>}
                   </div>
                   {currentRecipe.data.img && (
                     <h1 class="mt-5 max-w-lg text-4xl font-black uppercase leading-none tracking-[-0.05em] text-black sm:text-5xl">
@@ -160,32 +154,16 @@ const recipeJsonLd = {
                   )}
                 </div>
 
-                <div class="mt-8 border-t border-neutral-200 pt-4">
-                  {(currentRecipe.data.serves || currentRecipe.data.parts?.length) && (
-                    <div class="grid grid-cols-2 gap-4">
-                      {currentRecipe.data.serves && (
-                        <div>
-                          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">
-                            Yield
-                          </div>
-                          <div class="mt-1 text-2xl font-black uppercase leading-none">
-                            {currentRecipe.data.serves}
-                          </div>
-                        </div>
-                      )}
-                      {currentRecipe.data.parts?.length ? (
-                        <div>
-                          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">
-                            Sections
-                          </div>
-                          <div class="mt-1 text-2xl font-black uppercase leading-none">
-                            {currentRecipe.data.parts.length}
-                          </div>
-                        </div>
-                      ) : null}
+                {currentRecipe.data.serves && (
+                  <div class="mt-8 border-t border-neutral-200 pt-4">
+                    <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">
+                      Yield
                     </div>
-                  )}
-                </div>
+                    <div class="mt-1 text-2xl font-black uppercase leading-none">
+                      {currentRecipe.data.serves}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </header>
@@ -193,7 +171,7 @@ const recipeJsonLd = {
           <div class="px-4 py-6 sm:px-6 sm:py-8">
             {currentRecipe.data.parts && currentRecipe.data.parts.length > 0 && (
               <section class="space-y-8">
-                {currentRecipe.data.parts.map((p: RecipePart, i: number) => {
+                {currentRecipe.data.parts.map((p: RecipePart) => {
                   const hasIngredients = Boolean(p.ingredients && p.ingredients.length > 0);
                   const hasInstructions = Boolean(p.instructions && p.instructions.length > 0);
 
@@ -203,9 +181,11 @@ const recipeJsonLd = {
 
                   return (
                     <section class="border-t border-neutral-200 pt-4">
-                      <div class="mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-black">
-                        {`0${i + 1}`.slice(-2)}_{p.name?.replace(/\s+/g, "_").toUpperCase() ?? `SECTION_${i + 1}`}
-                      </div>
+                      {p.name && (
+                        <h2 class="mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-black">
+                          {p.name}
+                        </h2>
+                      )}
 
                       <div class:list={["grid gap-8", hasIngredients && hasInstructions ? "lg:grid-cols-[0.9fr_1.1fr]" : "grid-cols-1"]}>
                         {hasIngredients && (
