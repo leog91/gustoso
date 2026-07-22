@@ -376,7 +376,7 @@ This makes it easy to visually distinguish unverified PDF recipes from manually 
 
 ### Dev-only review actions
 
-When running `npm run dev`, each `needsReview` recipe gets two action buttons:
+When running `bun run dev`, each `needsReview` recipe gets two action buttons:
 
 - **✓ Approve** — Removes `needsReview: true` from the file frontmatter instantly. The recipe becomes production-ready.
 - **🗑️ Discard** — Moves the file to `.trash/`. It disappears from the active list but can be restored later.
@@ -424,7 +424,7 @@ After extracting PDF text, you typically need to:
 After creating or editing recipe files, always run the build to validate:
 
 ```bash
-npm run build
+bun run build
 ```
 
 If there are YAML syntax errors (e.g., unclosed quotes, bad indentation), the build will fail with a helpful message pointing to the problematic file and line.
@@ -449,12 +449,12 @@ When adding a recipe from a PDF:
 - [ ] Convert instructions into numbered steps or unnumbered descriptions
 - [ ] Use multiple `parts` if the recipe has distinct components
 - [ ] Add `storage` if mentioned in the PDF
-- [ ] Run `npm run build` to validate YAML syntax
-- [ ] Run `npm run dev` to preview on the homepage and verify the yellow review indicator appears
+- [ ] Run `bun run build` to validate YAML syntax
+- [ ] Run `bun run dev` to preview on the homepage and verify the yellow review indicator appears
 - [ ] Review each recipe for accuracy
 - [ ] Click **Approve** on the recipe page or list to remove the `needsReview` flag
 - [ ] Click **Discard** to move bad recipes to trash (visit `/dev/trash` to restore if needed)
-- [ ] Once all recipes are approved or discarded, run `npm run build` for production
+- [ ] Once all recipes are approved or discarded, run `bun run build` for production
 
 ---
 

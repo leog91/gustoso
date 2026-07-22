@@ -22,8 +22,8 @@ The review system provides three actions:
 
 | Context | `needsReview` recipes in list? | Accessible by URL? | Review UI visible? |
 |---------|-------------------------------|--------------------|--------------------|
-| `npm run dev` (localhost) | **Yes** (with yellow indicators) | **Yes** | **Yes** |
-| `npm run build` / production | **No** | **404** | **No** |
+| `bun run dev` (localhost) | **Yes** (with yellow indicators) | **Yes** | **Yes** |
+| `bun run build` / production | **No** | **404** | **No** |
 
 This means you can safely commit recipes with `needsReview: true` — they will never appear on the live site until you approve them.
 
@@ -44,7 +44,7 @@ needsReview: true
 Run the dev server:
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 Open `http://localhost:4321`. Recipes flagged for review appear with:
@@ -60,7 +60,7 @@ Click **Approve** on a recipe when you have verified it is correct.
 
 - The `needsReview: true` line is removed from the file frontmatter
 - The recipe immediately loses its yellow indicators
-- On the next `npm run build`, the recipe will be included in the production site
+- On the next `bun run build`, the recipe will be included in the production site
 
 You can approve from either:
 - The **homepage list** (index)
@@ -121,12 +121,12 @@ gustoso/
 
 | Issue | Solution |
 |-------|----------|
-| "I approved a recipe but it still shows yellow" | Restart `npm run dev` or wait a moment for Astro's content HMR to reload |
+| "I approved a recipe but it still shows yellow" | Restart `bun run dev` or wait a moment for Astro's content HMR to reload |
 | "A discarded recipe is still in the list" | Refresh the page. Content collections sometimes need a manual reload in dev |
 | "Can I see discarded recipes in production?" | No. The `.trash/` directory is local-only and gitignored |
 | "I discarded a recipe by mistake" | Go to `/dev/trash` and click **Restore** |
-| "The Approve/Discard buttons don't appear" | Make sure you are running `npm run dev`, not `npm run preview` |
-| "The trash page shows 'Dev only'" | The trash page only works during `npm run dev`, not after `npm run build` |
+| "The Approve/Discard buttons don't appear" | Make sure you are running `bun run dev`, not a production deployment |
+| "The trash page shows 'Dev only'" | The trash page only works during `bun run dev`, not after `bun run build` |
 
 ---
 

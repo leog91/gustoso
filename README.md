@@ -26,21 +26,21 @@ Search uses Fuse.js to match recipe titles and slugs. The browser calls Astro's 
 Run these commands from the project root:
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 Other available commands:
 
-- `npm run build` validates content and creates the production build.
-- `npm run preview` serves the production build locally.
+- `bun run build` validates content and creates the production build.
+- Astro preview is not supported by the Netlify adapter; use a Netlify deploy preview to inspect the production runtime.
 
 ## Add a Recipe
 
 1. Duplicate [`src/content/recipes/_recipe-template.md`](src/content/recipes/_recipe-template.md).
 2. Rename it with a kebab-case slug, such as `rosca-de-pascua-v2.md`.
 3. Complete the frontmatter and recipe parts.
-4. Run `npm run build` to validate the file against the content schema.
+4. Run `bun run build` to validate the file against the content schema.
 
 Minimal example:
 
