@@ -7,7 +7,7 @@ parts:
       - Pizza Dough
       - EVO Oil
       - Fior di Latte
-      - Motadella
+      - Mortadella
       - 1/2 Burrata
       - Pistachio Pesto
       - Pistachio Nuts (Chopped)
