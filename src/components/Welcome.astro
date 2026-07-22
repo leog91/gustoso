@@ -3,6 +3,12 @@ import { getCollection } from "astro:content";
 
 const isDev = import.meta.env.DEV;
 
+interface Props {
+  selectedCategory?: string;
+}
+
+const { selectedCategory } = Astro.props;
+
 const recipes = (await getCollection("recipes"))
   .map((r) => {
     return {
@@ -12,71 +18,67 @@ const recipes = (await getCollection("recipes"))
     };
   })
   .filter((r) => r.published !== false)
-  .filter((r) => isDev || !r.recipe.needsReview);
+  .filter((r) => isDev || !r.recipe.needsReview)
+  .sort((a, b) => {
+    const imageOrder = Number(Boolean(b.recipe.img)) - Number(Boolean(a.recipe.img));
+    return imageOrder || a.recipe.title.localeCompare(b.recipe.title);
+  });
+
+const categories = [...new Set(recipes.flatMap((recipe) => recipe.recipe.type ? [recipe.recipe.type] : []))].sort((a, b) => a.localeCompare(b));
+const visibleRecipes = selectedCategory
+  ? recipes.filter((recipe) => recipe.recipe.type === selectedCategory)
+  : recipes;
 ---
 
-<div>
-  <main>
-    <div class="flex mt-1 flex-col bg-neutral-800 max-w-2xl m-auto min-h-dvh">
-      <div class="flex flex-col items-center border-t-2 justify-center">
-        {
-          recipes.map((r) => (
-            <div
-              class={`font-semibold my-0.5 space-y-0.5 border-b-2 hover:bg-neutral-700 flex justify-between p-2 w-full ${r.recipe.needsReview ? "bg-yellow-900/20 border-l-4 border-l-yellow-500" : ""}`}
-            >
-              <a
-                href={`/recipes/${r.url}`}
-                class="flex items-center gap-2 flex-1 min-w-0"
-              >
-                {r.recipe.needsReview ? (
-                  <span class="inline-block w-2 h-2 rounded-full bg-yellow-500 shrink-0" title="Needs review"></span>
-                ) : null}
-                <span class="truncate">{r.recipe.title}</span>
-              </a>
+<main id="recipe-index" class="mx-auto max-w-6xl border-x border-neutral-200 bg-white text-black">
+  <nav aria-label="Recipe categories" class="flex flex-wrap gap-x-5 gap-y-2 border-b border-neutral-200 px-4 py-4 sm:px-6">
+    <a href="/" aria-current={selectedCategory ? undefined : "page"} class="text-[10px] font-bold uppercase tracking-[0.18em] text-black underline-offset-4 hover:text-[#C0392B] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">All recipes {recipes.length}</a>
+    {categories.map((category) => (
+      <a href={`/?category=${encodeURIComponent(category)}`} aria-current={selectedCategory === category ? "page" : undefined} class="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500 underline-offset-4 hover:text-[#C0392B] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">{category} {recipes.filter((recipe) => recipe.recipe.type === category).length}</a>
+    ))}
+  </nav>
 
-              <div class="flex gap-1.5 items-center shrink-0">
-                {isDev && r.recipe.needsReview ? (
-                  <>
-                    <button
-                      data-slug={r.url}
-                      data-action="approve"
-                      class="cursor-pointer bg-green-600 hover:bg-green-500 text-white px-2 py-0.5 text-xs rounded-3xl transition"
-                      title="Approve — remove needsReview"
-                      aria-label="Approve recipe"
-                    >
-                      ✓
-                    </button>
-                    <button
-                      data-slug={r.url}
-                      data-action="discard"
-                      class="cursor-pointer bg-red-600 hover:bg-red-500 text-white px-2 py-0.5 text-xs rounded-3xl transition"
-                      title="Discard — move to trash"
-                      aria-label="Discard recipe"
-                    >
-                      🗑️
-                    </button>
-                  </>
-                ) : null}
-                {r.recipe.needsReview ? (
-                  <div class="border-transparent bg-yellow-600 text-white px-2 text-sm flex items-center rounded-3xl">
-                    check
+  <section>
+    <header class="flex items-baseline justify-between border-b border-neutral-200 px-4 py-4 sm:px-6">
+      <h2 class="text-lg font-black uppercase tracking-[-0.03em]">{selectedCategory ?? "All recipes"}</h2>
+      <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">{visibleRecipes.length} {visibleRecipes.length === 1 ? "recipe" : "recipes"}</span>
+    </header>
+    <div class="grid md:grid-cols-2">
+      {visibleRecipes.map((r) => (
+          <article class:list={["group border-b border-neutral-200 p-4 sm:p-6", r.recipe.needsReview && "border-l-4 border-l-yellow-500 bg-yellow-50"]}>
+            <div class="grid gap-5 sm:grid-cols-[1fr_7rem]">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
+                  {r.recipe.type && <span>{r.recipe.type}</span>}
+                  {isDev && r.recipe.needsReview && <span class="text-yellow-700">Review required</span>}
+                </div>
+                <h3 class="mt-3 text-2xl font-black uppercase leading-[0.95] tracking-[-0.045em]">
+                  <a href={`/recipes/${r.url}`} class="underline-offset-4 hover:text-[#C0392B] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">{r.recipe.title}</a>
+                </h3>
+                {r.recipe.description && <p class="mt-3 max-w-md text-sm leading-6 text-neutral-700">{r.recipe.description}</p>}
+                {r.recipe.serves && <p class="mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">Yield: {r.recipe.serves}</p>}
+                {isDev && r.recipe.needsReview && (
+                  <div class="mt-5 flex gap-3">
+                    <button data-slug={r.url} data-action="approve" class="border border-green-700 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-green-800 hover:bg-green-700 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">Approve</button>
+                    <button data-slug={r.url} data-action="discard" class="border border-red-700 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-red-800 hover:bg-red-700 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">Discard</button>
                   </div>
-                ) : null}
-                {r.recipe.type ? (
-                  <div class="border-transparent bg-red-500 text-white px-2 text-sm flex items-center rounded-3xl">
-                    {r.recipe.type}
-                  </div>
-                ) : null}
+                )}
               </div>
+              {r.recipe.img ? (
+                <img src={r.recipe.img} alt="" class="aspect-square h-full w-full border border-neutral-200 object-cover" loading="lazy" />
+              ) : (
+                <div class="grid aspect-square grid-cols-4 border border-neutral-200" aria-hidden="true">
+                  {Array.from({ length: 16 }).map((_, index) => <span class:list={["border-neutral-200", index % 4 !== 3 && "border-r", index < 12 && "border-b"]}></span>)}
+                </div>
+              )}
             </div>
-          ))
-        }
-      </div>
+          </article>
+      ))}
     </div>
-  </main>
-</div>
+  </section>
+</main>
 
-<script>
+{isDev && <script>
   import { actions } from "astro:actions";
 
   // Only attach handlers if there are dev-action buttons present
@@ -103,6 +105,4 @@ const recipes = (await getCollection("recipes"))
       alert(err.message || "Action failed");
     }
   });
-</script>
-
-<style></style>
+</script>}

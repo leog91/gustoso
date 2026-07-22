@@ -4,24 +4,30 @@ import Welcome from "../components/Welcome.astro";
 import Layout from "../layouts/Layout.astro";
 
 const isDev = import.meta.env.DEV;
+const selectedCategory = Astro.url.searchParams.get("category") ?? undefined;
 ---
 
 <Layout title="Gustoso" description="A collection of curated recipes.">
-  <div class="flex items-center">
-    <h2 class="text-2xl font-bold pb-2 pl-2 sm:pl-5 shadow-lg">gustoso</h2>
-    <div class="flex flex-col mx-2 justify-center items-center w-full">
-      <Search />
-    </div>
-    {isDev ? (
-      <a
-        href="/dev/trash"
-        class="mr-4 text-sm text-yellow-400 hover:text-yellow-300 transition shrink-0"
-        title="View discarded recipes"
-      >
-        🗑️ Trash
-      </a>
-    ) : null}
-  </div>
+  <div class="min-h-dvh bg-white text-black">
+    <header class="mx-auto grid max-w-6xl border-x border-neutral-200 lg:grid-cols-[0.9fr_1.1fr]">
+      <div class="border-b border-neutral-200 px-4 py-6 sm:px-6 lg:border-b-0 lg:border-r">
+        <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-500">Recipe Index</p>
+        <h1 class="mt-3 text-5xl font-black uppercase leading-none tracking-[-0.07em] sm:text-6xl">Gustoso</h1>
+        <p class="mt-5 max-w-sm text-sm leading-6 text-neutral-700">A working collection of recipes, preparations, and service notes.</p>
+      </div>
+      <div class="flex flex-col justify-between px-4 py-6 sm:px-6">
+        <Search />
+        {isDev ? (
+          <a
+            href="/dev/trash"
+            class="mt-6 w-fit text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500 underline-offset-4 hover:text-[#C0392B] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black"
+          >
+            Editorial Trash
+          </a>
+        ) : null}
+      </div>
+    </header>
 
-  <Welcome />
+    <Welcome selectedCategory={selectedCategory} />
+  </div>
 </Layout>

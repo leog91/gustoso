@@ -2,36 +2,32 @@
 import search from "../assets/search.svg";
 ---
 
-<div class="absolute sm:w-9/12 top-1.5 flex flex-col">
+<div id="search-root" class="relative w-full max-w-xl">
   <form
     id="search-form"
-    class="max-w-96 m-auto p-1 bg-neutral-700 rounded-full flex items-center justify-between w-full"
+    class="grid grid-cols-[1fr_auto] border border-black bg-white"
+    role="search"
   >
     <input
-      class="px-2 placeholder-stone-200 w-full rounded-full"
-      placeholder="Search"
+      class="min-w-0 px-3 py-3 text-sm text-black placeholder:text-neutral-500 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black"
+      placeholder="Search recipes"
       autocomplete="off"
       id="search"
       required
       name="search"
       aria-label="Search recipes"
     />
-    <button class="cursor-pointer px-2">
-      <img class="" src={search.src} alt="search icon" /></button
-    >
+    <button class="border-l border-black px-3 hover:bg-black hover:text-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-black" aria-label="Search recipes">
+      <img class="size-4" src={search.src} alt="" />
+    </button>
   </form>
   <div
     id="results"
-    class="max-w-96 bg-neutral-700 hidden p-1 mt-1 rounded-lg mx-auto w-full"
+    class="absolute z-10 mt-2 hidden w-full border border-black bg-white"
+    role="status"
+    aria-live="polite"
   >
-    <!-- <div class="w-full flex justify-end">
-      <button
-        id="close"
-        class="cursor-pointer mx-2 size-6 hover:bg-red-300 bg-red-500"
-        aria-label="close">X</button
-      >
-    </div> -->
-    <ul id="results-list" class="p-2 text-white max-w-2xl w-full"></ul>
+    <ul id="results-list"></ul>
   </div>
 </div>
 
@@ -40,6 +36,7 @@ import search from "../assets/search.svg";
 
   const form = document.getElementById("search-form");
   const input = document.getElementById("search") as HTMLInputElement | null;
+  const searchRoot = document.getElementById("search-root");
   const resultsWrapper = document.getElementById("results");
   const resultsList = document.getElementById("results-list");
 
@@ -47,18 +44,15 @@ import search from "../assets/search.svg";
     if (
       resultsWrapper &&
       event.target instanceof Node &&
-      !resultsWrapper.contains(event.target) &&
-      !input?.contains(event.target)
+        !searchRoot?.contains(event.target)
     ) {
       resultsWrapper.classList.add("hidden");
-      // input?.blur();
     }
   });
 
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") {
       resultsWrapper?.classList.add("hidden");
-      // input?.blur();
     }
   });
 
@@ -67,8 +61,6 @@ import search from "../assets/search.svg";
     if (!form) return;
 
     const formData = new FormData(form);
-    const searchTerm = formData.get("search");
-
     const filteredRecipes = await actions.search(formData);
 
     if (resultsList) {
@@ -88,16 +80,20 @@ import search from "../assets/search.svg";
       a.textContent = r.item.title ?? r.item.url ?? "Unnamed Recipe";
       a.classList.add(
         "block",
-        // "text-sm",
-        // "bg-zinc-800",
-        // "text-zinc-200",
-        // "text-white"
-        "text-white",
-        "hover:bg-neutral-600",
-        "cursor-pointer",
-        "rounded-lg",
-        // "my-2",
-        "px-3"
+        "border-b",
+        "border-neutral-200",
+        "px-3",
+        "py-3",
+        "text-sm",
+        "font-bold",
+        "uppercase",
+        "tracking-[-0.02em]",
+        "text-black",
+        "hover:bg-[#C0392B]",
+        "hover:text-white",
+        "focus-visible:outline-2",
+        "focus-visible:outline-offset-[-2px]",
+        "focus-visible:outline-black"
       );
 
       li.appendChild(a);
@@ -108,10 +104,3 @@ import search from "../assets/search.svg";
     resultsWrapper?.classList.remove("hidden");
   });
 </script>
-<style>
-  dialog::backdrop {
-    /* background-color: salmon; */
-    /* filter: blur(30px); */
-    backdrop-filter: blur(2px);
-  }
-</style>
