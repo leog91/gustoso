@@ -29,3 +29,6 @@ pnpm-debug.log*
 
 temp/
 .trash/
+
+# local editorial audit
+docs/content-audit.md
