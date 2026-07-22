@@ -2,7 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 import leftArrow from "../../assets/left-arrow.svg";
 import { getCollection, render } from "astro:content";
-import type { Recipe, RecipePart } from "../../types";
+import type { RecipePart } from "../../types";
 
 const isDev = import.meta.env.DEV;
 const { recipe } = Astro.params;
@@ -24,6 +24,12 @@ if (!currentRecipe) {
 
 const renderedRecipe = await render(currentRecipe);
 const hasMarkdownNotes = Boolean(currentRecipe.body?.trim());
+const recipeParts: RecipePart[] = currentRecipe.data.parts?.length
+  ? currentRecipe.data.parts
+  : [{
+      ingredients: currentRecipe.data.ingredients,
+      instructions: currentRecipe.data.instructions,
+    }];
 const capitalizeFirst = (value: string) =>
   value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 
@@ -38,9 +44,9 @@ const recipeJsonLd = {
   ...(currentRecipe.data.author ? { author: { "@type": "Person", name: currentRecipe.data.author } } : {}),
   ...(currentRecipe.data.img ? { image: currentRecipe.data.img } : {}),
   ...(currentRecipe.data.serves ? { recipeYield: currentRecipe.data.serves } : {}),
-  recipeIngredient: currentRecipe.data.parts?.flatMap((p) => p.ingredients || []) || [],
+  recipeIngredient: recipeParts.flatMap((p) => p.ingredients || []),
   recipeInstructions:
-    currentRecipe.data.parts?.flatMap((p) =>
+    recipeParts.flatMap((p) =>
       (p.instructions || []).map((ins) => ({
         "@type": "HowToStep",
         text: ins.description,
@@ -117,23 +123,13 @@ const recipeJsonLd = {
                 <div class="flex min-h-[260px] flex-col justify-between border-b border-neutral-200 bg-[#F5F5F5] p-6 sm:min-h-[360px] lg:border-b-0 lg:border-r lg:border-neutral-200">
                   <div class="flex items-start justify-between gap-4 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
                     <span>Gustoso</span>
+                    <span>Recipe</span>
                   </div>
-                  <div class="py-8">
-                    <div class="max-w-md text-4xl font-black uppercase leading-none tracking-[-0.06em] text-black sm:text-6xl">
-                      {currentRecipe.data.title}
-                    </div>
-                    <div class="mt-6 h-px w-16 bg-black"></div>
+                  <div class="grid grid-cols-6 border-y border-neutral-300" aria-hidden="true">
+                    {Array.from({ length: 18 }).map((_, index) => (
+                      <div class:list={["aspect-square border-neutral-300", index % 6 !== 5 && "border-r", index < 12 && "border-b"]}></div>
+                    ))}
                   </div>
-                  {currentRecipe.data.type && (
-                    <div class="border-t border-neutral-200 pt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
-                      <div>
-                        <div>Category</div>
-                        <div class="mt-1 text-sm text-black">
-                         {currentRecipe.data.type}
-                       </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -142,11 +138,9 @@ const recipeJsonLd = {
                   <div class="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-500">
                     {currentRecipe.data.type && <span>{currentRecipe.data.type}</span>}
                   </div>
-                  {currentRecipe.data.img && (
-                    <h1 class="mt-5 max-w-lg text-4xl font-black uppercase leading-none tracking-[-0.05em] text-black sm:text-5xl">
-                      {currentRecipe.data.title}
-                    </h1>
-                  )}
+                  <h1 class="mt-5 max-w-lg text-4xl font-black uppercase leading-none tracking-[-0.05em] text-black sm:text-5xl">
+                    {currentRecipe.data.title}
+                  </h1>
                   {currentRecipe.data.description && (
                     <p class="mt-5 max-w-md text-sm leading-6 text-neutral-700">
                       {currentRecipe.data.description}
@@ -169,9 +163,9 @@ const recipeJsonLd = {
           </header>
 
           <div class="px-4 py-6 sm:px-6 sm:py-8">
-            {currentRecipe.data.parts && currentRecipe.data.parts.length > 0 && (
+            {recipeParts.some((p) => p.ingredients?.length || p.instructions?.length) && (
               <section class="space-y-8">
-                {currentRecipe.data.parts.map((p: RecipePart) => {
+                {recipeParts.map((p) => {
                   const hasIngredients = Boolean(p.ingredients && p.ingredients.length > 0);
                   const hasInstructions = Boolean(p.instructions && p.instructions.length > 0);
 
@@ -191,9 +185,11 @@ const recipeJsonLd = {
                         {hasIngredients && (
                           <div>
                             <div class="border-t border-black pt-3">
-                              <h2 class="text-[13px] font-bold uppercase tracking-[0.14em] text-black">
-                                Ingredients
-                              </h2>
+                              {p.name ? (
+                                <h3 class="text-[13px] font-bold uppercase tracking-[0.14em] text-black">Ingredients</h3>
+                              ) : (
+                                <h2 class="text-[13px] font-bold uppercase tracking-[0.14em] text-black">Ingredients</h2>
+                              )}
                             </div>
                             <ul class="mt-4 divide-y divide-neutral-200 border-y border-neutral-200">
                               {p.ingredients?.map((ingredient) => {
@@ -219,15 +215,17 @@ const recipeJsonLd = {
                         {hasInstructions && (
                           <div>
                             <div class="border-t border-black pt-3">
-                              <h2 class="text-[13px] font-bold uppercase tracking-[0.14em] text-black">
-                                Steps
-                              </h2>
+                              {p.name ? (
+                                <h3 class="text-[13px] font-bold uppercase tracking-[0.14em] text-black">Method</h3>
+                              ) : (
+                                <h2 class="text-[13px] font-bold uppercase tracking-[0.14em] text-black">Method</h2>
+                              )}
                             </div>
                             <ol class="mt-4 space-y-6">
                               {p.instructions?.map((ins, stepIndex) => (
                                 <li class="relative border-t border-neutral-200 pt-4 pl-20">
                                   <span class="pointer-events-none absolute left-0 top-1 text-5xl font-black leading-none tracking-[-0.08em] text-neutral-200">
-                                    {String(ins.step ?? stepIndex + 1).padStart(2, "0")}
+                                    {String(stepIndex + 1).padStart(2, "0")}
                                   </span>
                                   <p class="max-w-xl text-sm leading-6 text-black">
                                     {ins.description}
@@ -238,6 +236,12 @@ const recipeJsonLd = {
                           </div>
                         )}
                       </div>
+                      {p.storage && (
+                        <aside class="mt-6 border-l-2 border-black pl-4">
+                          <h3 class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">Storage</h3>
+                          <p class="mt-2 text-sm leading-6 text-neutral-700">{p.storage}</p>
+                        </aside>
+                      )}
                     </section>
                   );
                 })}
@@ -247,18 +251,12 @@ const recipeJsonLd = {
             {(currentRecipe.data.storage || hasMarkdownNotes) && (
               <section class="mt-10 border-t border-neutral-200 pt-5">
                 <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-                  <div>
-                    {currentRecipe.data.storage && (
-                      <div class="border-l-2 border-black pl-4">
-                        <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">
-                          Chef Note
-                        </div>
-                        <p class="mt-2 text-sm italic leading-6 text-neutral-700">
-                          {currentRecipe.data.storage}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  {currentRecipe.data.storage && (
+                    <div class="border-l-2 border-black pl-4">
+                      <h2 class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">Storage</h2>
+                      <p class="mt-2 text-sm leading-6 text-neutral-700">{currentRecipe.data.storage}</p>
+                    </div>
+                  )}
 
                   {renderedRecipe && hasMarkdownNotes && (
                     <div class="recipe-content border-t border-black pt-3">
@@ -278,7 +276,7 @@ const recipeJsonLd = {
   </div>
 </Layout>
 
-<script>
+{isDev && <script>
   import { actions } from "astro:actions";
 
   document.addEventListener("click", async (e) => {
@@ -305,7 +303,7 @@ const recipeJsonLd = {
       alert(err.message || "Action failed");
     }
   });
-</script>
+</script>}
 
 <style>
   :global(body) {

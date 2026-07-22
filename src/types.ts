@@ -7,6 +7,7 @@ export interface RecipePart {
   name?: string;
   ingredients?: string[];
   instructions?: RecipeStep[];
+  storage?: string;
 }
 
 export interface Recipe {
