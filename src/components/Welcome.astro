@@ -45,7 +45,7 @@ const visibleRecipes = selectedCategory
     </header>
     <div class="grid md:grid-cols-2">
       {visibleRecipes.map((r) => (
-          <article class:list={["group border-b border-neutral-200 p-4 sm:p-6", r.recipe.needsReview && "border-l-4 border-l-yellow-500 bg-yellow-50"]}>
+          <article class:list={["group relative border-b border-neutral-200 p-4 sm:p-6", r.recipe.needsReview && "border-l-4 border-l-yellow-500 bg-yellow-50"]}>
             <div class="grid gap-5 sm:grid-cols-[1fr_7rem]">
               <div class="min-w-0">
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
@@ -53,14 +53,14 @@ const visibleRecipes = selectedCategory
                   {isDev && r.recipe.needsReview && <span class="text-yellow-700">Review required</span>}
                 </div>
                 <h3 class="mt-3 text-2xl font-black uppercase leading-[0.95] tracking-[-0.045em]">
-                  <a href={`/recipes/${r.url}`} class="underline-offset-4 hover:text-[#C0392B] hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">{r.recipe.title}</a>
+                  <a href={`/recipes/${r.url}`} class="after:absolute after:inset-0 underline-offset-4 group-hover:text-[#C0392B] group-hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">{r.recipe.title}</a>
                 </h3>
                 {r.recipe.description && <p class="mt-3 max-w-md text-sm leading-6 text-neutral-700">{r.recipe.description}</p>}
                 {r.recipe.serves && <p class="mt-4 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">Yield: {r.recipe.serves}</p>}
                 {isDev && r.recipe.needsReview && (
                   <div class="mt-5 flex gap-3">
-                    <button data-slug={r.url} data-action="approve" class="border border-green-700 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-green-800 hover:bg-green-700 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">Approve</button>
-                    <button data-slug={r.url} data-action="discard" class="border border-red-700 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-red-800 hover:bg-red-700 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">Discard</button>
+                    <button data-slug={r.url} data-action="approve" class="relative z-10 border border-green-700 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-green-800 hover:bg-green-700 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">Approve</button>
+                    <button data-slug={r.url} data-action="discard" class="relative z-10 border border-red-700 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-red-800 hover:bg-red-700 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">Discard</button>
                   </div>
                 )}
               </div>
