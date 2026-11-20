@@ -62,9 +62,29 @@ parts:
 
 Supported top-level fields include `title`, `published`, `type`, `serves`, `description`, `img`, `storage`, `ingredients`, `instructions`, and `parts`. Each part can have a `name`, `ingredients`, `instructions`, and `storage`.
 
+### Optimize a recipe photo
+
+With `bun run dev` running, open [Optimize Photo](http://localhost:4321/dev/photos). Choose or drop a photo to compare it with the optimized JPEG. The default is quality 75 with a 1200 px maximum edge, no upscaling, and metadata removed. Adjust quality if needed, then use **Save project backup** or **Download JPEG**.
+
+**Save project backup** writes `src/assets/recipe-img/<recipe-slug>.jpg` without replacing an existing JPEG. Recipe pages still use `img` and never serve the backup.
+
+To enable uploads, create an [ImageKit private API key](https://imagekit.io/docs/api-keys) with media read/write access. Add `IMAGEKIT_PRIVATE_KEY=your_private_key` to the gitignored `.env` in the project root and restart `bun run dev`. Keep the key out of Git and don't add it to Netlify; it is only used on the dev server.
+
+In the **Photo library**, click a thumbnail to open the saved JPEG or choose **Upload to ImageKit**. Each upload creates a separate public file in `/gustoso/recipes`. Choose **Use this photo** to set `img` in the recipe or its active draft. **Remove image link** clears `img` without deleting the backup or the hosted photo. Neither action changes the review status. Uploaded URLs are remembered in the current browser until you apply them.
+
+In dev mode, if an Imgur or ImageKit image fails to load, the recipe shows a reminder with the backup path and an upload link, if a backup exists.
+
 For importing recipes from PDFs, see [`docs/ADDING_RECIPES_FROM_PDF.md`](docs/ADDING_RECIPES_FROM_PDF.md).
 
+### Local-only PDF import
+
+Run `bun run dev` and open [localhost:4321/dev/import](http://localhost:4321/dev/import) (also linked as **Import Recipes** on the homepage). Put PDFs in `temp/`, choose pages, trim the extracted text to the recipe you want, and create a local draft. Edit its recipe Markdown, validate and preview it alongside the original PDF, then explicitly approve it.
+
+PDFs and draft records stay in gitignored `temp/`; only approval creates a file in `src/content/recipes/`. Skipped drafts can be restored. Extraction is local text extraction, not automatic recipe conversion or OCR. No recipe is added automatically. See the [local import walkthrough](docs/ADDING_RECIPES_FROM_PDF.md#local-interactive-workflow-recommended).
+
 ## Editorial Review Workflow
+
+Open **`/dev/review`** (the **Review Queue** link on the dev homepage) to find all collection recipes marked for review, local PDF drafts awaiting approval, and links to approved imports.
 
 Recipes that need verification can be marked with `needsReview: true`. They remain visible only in development, where editorial controls allow reviewers to:
 

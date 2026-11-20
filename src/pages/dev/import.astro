@@ -1,0 +1,362 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+if (!import.meta.env.DEV) return new Response(null, { status: 404 });
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+
+<Layout title="Local recipe import | Gustoso">
+  <main class="min-h-dvh bg-white text-black">
+    <div class="mx-auto max-w-[1500px] border-x border-neutral-200 p-4 sm:p-6">
+      <header class="mb-6 border-b border-black pb-5">
+        <a href="/" class="text-xs font-bold uppercase underline">← Recipe index</a>
+        <a href="/dev/review" class="ml-5 text-xs font-bold uppercase underline">Review queue</a>
+        <a href="/dev/photos" target="_blank" rel="noopener" class="ml-5 text-xs font-bold uppercase underline">Optimize photo ↗</a>
+        <h1 class="mt-4 text-4xl font-black uppercase tracking-tight">Local recipe import</h1>
+        <p class="mt-3 max-w-3xl text-sm text-neutral-600">Choose pages, keep only the relevant text, and prepare one recipe at a time. PDFs and drafts stay in gitignored <code>temp/</code>. Only explicit approval adds a Markdown file to the recipe collection.</p>
+        <p id="notice" role="status" aria-live="polite" class="mt-4 whitespace-pre-wrap text-sm font-semibold"></p>
+      </header>
+
+      <div class="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <section class="min-w-0 space-y-4" aria-labelledby="source-heading">
+          <h2 id="source-heading" class="text-xl font-bold">1. Inspect the source</h2>
+          <label class="block text-sm font-bold">PDF in temp/
+            <select id="pdf" class="mt-2 w-full border border-neutral-400 bg-white p-2 font-normal"><option value="">Choose a local PDF…</option></select>
+          </label>
+          <button id="extract" type="button">Extract page text</button>
+          <p class="text-xs text-neutral-600">Extraction is local, not AI conversion. Check quantities and reading order against the PDF. Scans without text need manual transcription/OCR.</p>
+          <a id="pdf-link" target="_blank" rel="noopener" class="hidden text-sm underline">Open PDF in a new tab ↗</a>
+          <iframe id="pdf-viewer" title="Original local PDF" class="hidden h-[550px] w-full border border-neutral-300"></iframe>
+          <fieldset id="page-picker" class="hidden border border-neutral-300 p-3">
+            <legend class="px-1 text-sm font-bold">Select only the relevant pages</legend>
+            <label class="block text-sm">Find page text <input id="page-filter" type="search" class="ml-2 border p-1" placeholder="Recipe name…" /></label>
+            <div id="pages" class="mt-3 max-h-64 space-y-2 overflow-auto"></div>
+          </fieldset>
+          <label class="block text-sm font-bold">Selected source text
+            <textarea id="source-text" rows="12" class="mt-2 w-full border border-neutral-400 p-3 font-mono text-xs font-normal" placeholder="Extract text, select pages, then remove any unrelated recipes here."></textarea>
+          </label>
+          <p class="text-xs text-neutral-600">You can trim this text before creating a draft. It is saved locally as a reference, never copied into the published recipe.</p>
+          <form id="create-form" class="grid gap-3 border-t border-neutral-200 pt-4 sm:grid-cols-2">
+            <label class="text-sm font-bold">Recipe title <input id="new-title" required maxlength="200" class="mt-1 w-full border border-neutral-400 p-2 font-normal" /></label>
+            <label class="text-sm font-bold">Filename slug <input id="new-slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="120" class="mt-1 w-full border border-neutral-400 p-2 font-normal" placeholder="my-recipe" /></label>
+            <button type="submit" class="sm:col-span-2">Create local draft from selected text</button>
+          </form>
+        </section>
+
+        <section class="min-w-0 space-y-4" aria-labelledby="review-heading">
+          <h2 id="review-heading" class="text-xl font-bold">2. Edit, validate, approve</h2>
+          <p class="text-sm text-neutral-600">No recipes are imported in bulk. Select a saved draft below to resume reviewing.</p>
+          <div id="drafts" class="max-h-64 space-y-2 overflow-auto border border-neutral-300 p-3"></div>
+          <div id="editor" class="hidden space-y-4">
+            <p id="draft-source" class="break-words text-xs text-neutral-600"></p>
+            <details><summary class="cursor-pointer text-sm underline">Saved source excerpt</summary><pre id="draft-excerpt" class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap bg-neutral-100 p-3 text-xs"></pre></details>
+            <label class="block text-sm font-bold">Destination slug <input id="edit-slug" maxlength="120" class="mt-1 w-full border border-neutral-400 p-2 font-normal" /></label>
+            <label class="block text-sm font-bold">Recipe Markdown / YAML frontmatter
+              <textarea id="markdown" rows="22" spellcheck="false" class="mt-2 w-full border border-neutral-400 p-3 font-mono text-xs font-normal"></textarea>
+            </label>
+            <details class="text-sm"><summary class="cursor-pointer underline">Format example</summary><pre class="mt-2 overflow-auto bg-neutral-100 p-3 text-xs">{`---
+title: My recipe
+type: Dessert
+serves: 4 portions
+needsReview: true
+parts:
+  - name: Base
+    ingredients:
+      - 200 g flour
+      - 100 ml milk
+    instructions:
+      - step: 1
+        description: Mix the ingredients.
+---
+Optional recipe notes.
+`}</pre><p class="mt-2">Use multiple parts for components. Quote strings containing colons. Do not guess missing quantities or instructions.</p></details>
+            <div class="flex flex-wrap gap-2">
+              <button id="save" type="button">Save local draft</button>
+              <button id="validate" type="button">Validate & preview</button>
+              <button id="skip" type="button">Skip (keep locally)</button>
+            </div>
+            <div id="preview" class="hidden space-y-3 border border-neutral-300 bg-neutral-50 p-4" aria-live="polite"></div>
+            <label class="flex items-start gap-2 text-sm"><input id="confirmed" type="checkbox" class="mt-1" /> I checked quantities, units, components, and instructions against the PDF. This recipe is ready to publish.</label>
+            <button id="approve" type="button" class="!border-green-700 !bg-green-700 !text-white">Approve & add to recipe collection</button>
+            <p class="text-xs text-neutral-600">Approval saves the current edits, validates the shared recipe schema, removes the review flag, and creates <code>src/content/recipes/&lt;slug&gt;.md</code>. Existing files are never overwritten. Review the Git diff before committing.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  button { cursor: pointer; border: 1px solid #171717; padding: 0.6rem 0.8rem; font-size: 0.75rem; font-weight: 700; background: white; }
+  button:hover { background: #f5f5f5; }
+  button:disabled { cursor: wait; opacity: 0.5; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid #171717; outline-offset: 3px; }
+</style>
+
+<script>
+  interface Draft {
+    id: string; slug: string; source: string; pages: number[]; sourceText: string;
+    markdown: string; status: 'draft' | 'skipped' | 'approved'; updatedAt: string;
+  }
+  const element = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const pdf = element<HTMLSelectElement>('pdf');
+  const sourceText = element<HTMLTextAreaElement>('source-text');
+  const markdown = element<HTMLTextAreaElement>('markdown');
+  const editSlug = element<HTMLInputElement>('edit-slug');
+  const confirmed = element<HTMLInputElement>('confirmed');
+  let drafts: Draft[] = [];
+  let current: Draft | undefined;
+  let pageTexts: string[] = [];
+  let extractedSource = '';
+  let dirty = false;
+  let busy = false;
+  const controls = () => document.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('main button, main input, main textarea, main select');
+
+  function notice(message: string, error = false) {
+    const target = element('notice');
+    target.textContent = message;
+    target.style.color = error ? '#b91c1c' : '#166534';
+  }
+  async function api(action: string, data: Record<string, unknown> = {}) {
+    const response = await fetch('/api/dev/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...data }) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Import failed.');
+    return result;
+  }
+  async function waitForRecipe(slug: string) {
+    // Each request gets Astro's latest content module after its asynchronous watcher reload.
+    // Waiting inside the approval request would keep reading that request's old snapshot.
+    const deadline = Date.now() + 5000;
+    do {
+      try {
+        const response = await fetch(`/recipes/${encodeURIComponent(slug)}`, { method: 'HEAD', cache: 'no-store' });
+        if (response.ok) return true;
+      } catch { /* A dev-server reload can briefly interrupt requests. */ }
+      await new Promise((resolve) => window.setTimeout(resolve, 100));
+    } while (Date.now() < deadline);
+    return false;
+  }
+  async function run(task: () => Promise<void>) {
+    if (busy) return;
+    busy = true;
+    controls().forEach((control) => control.disabled = true);
+    try { await task(); } catch (error) { notice(error instanceof Error ? error.message : 'Import failed.', true); }
+    finally {
+      busy = false;
+      controls().forEach((control) => control.disabled = false);
+    }
+  }
+  const slugify = (title: string) => title.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120).replace(/-$/, '');
+  function invalidate() {
+    dirty = true;
+    confirmed.checked = false;
+    element('preview').classList.add('hidden');
+  }
+  markdown.addEventListener('input', invalidate);
+  editSlug.addEventListener('input', invalidate);
+  window.addEventListener('beforeunload', (event) => { if (dirty) event.preventDefault(); });
+
+  function showPdf(source: string, page = 1) {
+    const url = `/api/dev/import?pdf=${encodeURIComponent(source)}#page=${page}`;
+    element<HTMLIFrameElement>('pdf-viewer').src = url;
+    element<HTMLAnchorElement>('pdf-link').href = url;
+    element('pdf-viewer').classList.remove('hidden');
+    element('pdf-link').classList.remove('hidden');
+  }
+  pdf.addEventListener('change', () => {
+    pageTexts = [];
+    extractedSource = '';
+    sourceText.value = '';
+    element('pages').replaceChildren();
+    element('page-picker').classList.add('hidden');
+    if (pdf.value) showPdf(pdf.value);
+    else {
+      element('pdf-viewer').classList.add('hidden');
+      element<HTMLIFrameElement>('pdf-viewer').removeAttribute('src');
+      element('pdf-link').classList.add('hidden');
+    }
+  });
+  const selectedPages = () => [...document.querySelectorAll<HTMLInputElement>('#pages input:checked')].map((input) => Number(input.value));
+  function updateSource() {
+    sourceText.value = selectedPages().map((page) => `--- Page ${page} ---\n${pageTexts[page - 1]}`).join('\n\n');
+  }
+  element('extract').addEventListener('click', () => run(async () => {
+    if (!pdf.value) throw new Error('Choose a PDF first.');
+    const source = pdf.value;
+    notice('Extracting local PDF text…');
+    const result = await api('extract', { source });
+    if (pdf.value !== source) return;
+    pageTexts = result.text;
+    extractedSource = source;
+    element('pages').replaceChildren();
+    element<HTMLInputElement>('page-filter').value = '';
+    pageTexts.forEach((text, index) => {
+      const row = document.createElement('label');
+      row.className = 'flex items-start gap-2 text-xs';
+      row.dataset.search = text.toLowerCase();
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox'; checkbox.value = String(index + 1);
+      checkbox.addEventListener('change', () => {
+        updateSource();
+        if (checkbox.checked) showPdf(source, index + 1);
+      });
+      const label = document.createElement('span');
+      label.textContent = `Page ${index + 1}: ${text.trim().slice(0, 160) || '(No text layer — transcribe manually)'}…`;
+      row.append(checkbox, label);
+      element('pages').append(row);
+    });
+    element('page-picker').classList.remove('hidden');
+    notice(`${result.totalPages} pages extracted. Select pages, then trim the source text to just the recipe you want.`);
+  }));
+  element('page-filter').addEventListener('input', (event) => {
+    const query = (event.target as HTMLInputElement).value.toLowerCase();
+    document.querySelectorAll<HTMLElement>('#pages label').forEach((row) => row.hidden = !row.dataset.search?.includes(query));
+  });
+  element('new-title').addEventListener('input', () => {
+    element<HTMLInputElement>('new-slug').value = slugify(element<HTMLInputElement>('new-title').value);
+  });
+
+  function openDraft(draft: Draft) {
+    if (dirty && !window.confirm('Discard unsaved editor changes and open this draft?')) return;
+    current = draft;
+    markdown.value = draft.markdown;
+    editSlug.value = draft.slug;
+    dirty = false;
+    confirmed.checked = false;
+    element('preview').classList.add('hidden');
+    element('editor').classList.remove('hidden');
+    element('draft-source').textContent = `${draft.source} · pages ${draft.pages.join(', ')} · ${draft.status}`;
+    element('draft-excerpt').textContent = draft.sourceText;
+    showPdf(draft.source, draft.pages[0]);
+  }
+  async function refresh() {
+    const response = await fetch('/api/dev/import');
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    drafts = result.drafts;
+    const selected = pdf.value;
+    pdf.replaceChildren(new Option('Choose a local PDF…', ''));
+    result.pdfs.forEach((name: string) => pdf.add(new Option(name, name)));
+    pdf.value = selected;
+    const container = element('drafts');
+    container.replaceChildren();
+    const active = drafts.filter((draft) => draft.status !== 'approved');
+    if (!active.length) container.textContent = 'No local drafts yet. Choose a PDF to start.';
+    active.forEach((draft) => {
+      const row = document.createElement('div');
+      row.className = 'flex flex-wrap items-center gap-2';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = `${draft.slug} · ${draft.status}`;
+      button.addEventListener('click', () => { if (!busy) openDraft(draft); });
+      row.append(button);
+      if (draft.status === 'skipped') {
+        const restore = document.createElement('button');
+        restore.type = 'button'; restore.textContent = 'Restore';
+        restore.addEventListener('click', () => run(async () => { await api('restore', { id: draft.id }); await refresh(); notice('Draft restored.'); }));
+        row.append(restore);
+      }
+      container.append(row);
+    });
+  }
+  element('create-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    run(async () => {
+      if (dirty && !window.confirm('Save or discard your current edits before creating another draft. Discard unsaved edits?')) return;
+      if (!extractedSource || extractedSource !== pdf.value || !selectedPages().length) throw new Error('Extract the PDF and select at least one source page first.');
+      const draft = await api('create', {
+        title: element<HTMLInputElement>('new-title').value, slug: element<HTMLInputElement>('new-slug').value,
+        source: extractedSource, pages: selectedPages(), sourceText: sourceText.value,
+      });
+      dirty = false;
+      await refresh(); openDraft(draft);
+      notice('Local draft created. Fill in ingredients and instructions in the editor; source text is kept separately for comparison.');
+    });
+  });
+  async function save() {
+    if (!current) throw new Error('Select a draft first.');
+    current = await api('save', { id: current.id, slug: editSlug.value, markdown: markdown.value });
+    dirty = false;
+    await refresh();
+  }
+  element('save').addEventListener('click', () => run(async () => { await save(); notice('Draft saved locally (not published).'); }));
+
+  function preview(data: any, body: string) {
+    const container = element('preview');
+    container.replaceChildren();
+    const heading = document.createElement('h3');
+    heading.className = 'text-xl font-bold'; heading.textContent = data.title;
+    container.append(heading);
+    function line(text: string) { const p = document.createElement('p'); p.textContent = text; container.append(p); }
+    if (data.type) line(`Category: ${data.type}`);
+    if (data.serves) line(`Yield: ${data.serves}`);
+    if (data.description) line(data.description);
+    (data.parts?.length ? data.parts : [data]).forEach((part: any) => {
+      if (part.name) line(part.name);
+      if (part.ingredients?.length) {
+        const list = document.createElement('ul'); list.className = 'list-disc space-y-1 pl-5 text-sm';
+        part.ingredients.forEach((text: string) => { const item = document.createElement('li'); item.textContent = text; list.append(item); });
+        container.append(list);
+      }
+      if (part.instructions?.length) {
+        const list = document.createElement('ol'); list.className = 'list-decimal space-y-2 pl-5 text-sm';
+        part.instructions.forEach((step: { description: string }) => { const item = document.createElement('li'); item.textContent = step.description; list.append(item); });
+        container.append(list);
+      }
+      if (part.storage && part !== data) line(`Storage: ${part.storage}`);
+    });
+    if (data.storage) line(`Storage: ${data.storage}`);
+    if (body.trim()) line(`Notes (Markdown source): ${body}`);
+    container.classList.remove('hidden');
+  }
+  element('validate').addEventListener('click', () => run(async () => {
+    const result = await api('validate', { markdown: markdown.value });
+    preview(result.data, result.body);
+    notice('Schema valid. Preview uses plain text for safety. Check accuracy against the original PDF before approving.');
+  }));
+  element('skip').addEventListener('click', () => run(async () => {
+    await save();
+    await api('skip', { id: current!.id });
+    current = undefined;
+    element('editor').classList.add('hidden');
+    await refresh(); notice('Skipped locally. You can restore this draft later.');
+  }));
+  element('approve').addEventListener('click', () => run(async () => {
+    if (!confirmed.checked) throw new Error('Confirm that you checked the recipe against the source first.');
+    if (!window.confirm(`Add ${editSlug.value}.md to the version-controlled recipe collection?`)) return;
+    notice('Saving and approving the recipe, then waiting for the recipe index to refresh…');
+    await save();
+    const result = await api('approve', { id: current!.id });
+    const indexed = await waitForRecipe(result.slug);
+    current = undefined;
+    element('editor').classList.add('hidden');
+    await refresh();
+    if (indexed) {
+      notice(`Approved: src/content/recipes/${result.slug}.md. Only this recipe was added. Review the Git diff before committing.`);
+      const link = document.createElement('a');
+      link.href = `/recipes/${encodeURIComponent(result.slug)}`;
+      link.textContent = ' Open recipe →'; link.className = 'underline'; element('notice').append(link);
+    } else {
+      notice(`Recipe saved successfully to src/content/recipes/${result.slug}.md, but Astro's dev content index has not refreshed. Restart bun run dev, then find it on the recipe index or at /recipes/${result.slug}. Do not approve it again.`, true);
+    }
+  }));
+  run(async () => {
+    await refresh();
+    const id = new URLSearchParams(window.location.search).get('draft');
+    if (!id) return;
+    const draft = drafts.find((item) => item.id === id);
+    if (!draft) throw new Error('This local draft could not be found. Open the review queue to choose another.');
+    if (draft.status === 'approved') {
+      window.location.href = `/recipes/${encodeURIComponent(draft.slug)}`;
+      return;
+    }
+    openDraft(draft);
+    try {
+      const result = await api('validate', { markdown: draft.markdown });
+      preview(result.data, result.body);
+      notice('Draft opened for review. Check the preview and review notes against the PDF before approving.');
+    } catch {
+      notice('Draft opened. Its Markdown needs correction before it can be previewed or approved.', true);
+    }
+  });
+</script>

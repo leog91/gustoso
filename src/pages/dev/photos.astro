@@ -1,0 +1,392 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import { defaultPhotoQuality, photoMaxSide } from '../../lib/photo-settings';
+
+if (!import.meta.env.DEV) return new Response(null, { status: 404 });
+Astro.response.headers.set('Cache-Control', 'no-store');
+const slug = Astro.url.searchParams.get('slug') ?? '';
+const hasKey = Boolean(import.meta.env.IMAGEKIT_PRIVATE_KEY?.trim());
+const { listPhotoBackups } = await import('../../lib/photo-backup-path');
+const { listRecipeDrafts, validateMarkdown } = await import('../../lib/recipe-import');
+const recipes = new Map((await getCollection('recipes')).map((recipe) => [recipe.id, recipe.data]));
+const drafts = new Map<string, ReturnType<typeof validateMarkdown>['data'][]>();
+for (const draft of listRecipeDrafts()) {
+  if (draft.status !== 'draft' || recipes.has(draft.slug)) continue;
+  try {
+    const entries = drafts.get(draft.slug) ?? [];
+    drafts.set(draft.slug, entries);
+    entries.push(validateMarkdown(draft.markdown).data);
+  } catch { /* Unvalidated draft edits are handled in the import workspace. */ }
+}
+const labels = { ready: 'Ready to upload', imgur: 'Using Imgur', imagekit: 'Linked to ImageKit', other: 'Using another URL' };
+const backups = listPhotoBackups().map((backup) => {
+  const candidates = drafts.get(backup.slug);
+  const recipe = recipes.get(backup.slug) ?? (candidates?.length === 1 ? candidates[0] : undefined);
+  const url = recipe?.img?.trim() ?? '';
+  const host = URL.canParse(url) ? new URL(url).hostname : '';
+  const state: keyof typeof labels = host === 'ik.imagekit.io' ? 'imagekit'
+    : host === 'imgur.com' || host.endsWith('.imgur.com') ? 'imgur' : url ? 'other' : 'ready';
+  const title = recipe?.title ?? backup.slug.replace(/(^|-)([a-z])/g, (_, dash, letter) => `${dash ? ' ' : ''}${letter.toUpperCase()}`);
+  return { ...backup, title, url, state, canEdit: Boolean(recipe) };
+}).sort((a, b) => Number(b.slug === slug) - Number(a.slug === slug)
+  || Number(b.state === 'ready') - Number(a.state === 'ready') || a.title.localeCompare(b.title));
+---
+
+<Layout title="Optimize photo | Gustoso">
+  <main class="min-h-dvh bg-white text-black">
+    <div class="mx-auto max-w-6xl border-x border-neutral-200 p-4 sm:p-6">
+      <header class="border-b border-black pb-6">
+        <nav class="flex flex-wrap gap-5 text-xs font-bold uppercase">
+          <a href="/" class="underline">← Recipe index</a>
+          <a href="/dev/import" class="underline">Import recipes</a>
+        </nav>
+        <h1 class="mt-6 text-4xl font-black uppercase tracking-tight">Optimize photo</h1>
+        <p class="mt-3 text-sm text-neutral-600">Optimize a photo, save a project backup, and upload the saved JPEG to ImageKit. Recipe pages still use the URL in <code>img</code>.</p>
+      </header>
+      <div class="my-6 grid gap-5 sm:grid-cols-2">
+        <label id="photo-drop" class="block border border-dashed border-neutral-400 p-4 text-sm font-bold">
+          Choose or drop a photo
+          <input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp" class="mt-2 block w-full text-sm font-normal" />
+          <span class="mt-2 block text-xs font-normal text-neutral-600">Still JPEG, PNG, or WebP · up to 20 MB</span>
+        </label>
+        <label class="block border border-neutral-200 p-4 text-sm font-bold">
+          JPEG quality: <output id="photo-quality-value" for="photo-quality">{defaultPhotoQuality}</output>
+          <input id="photo-quality" type="range" min="1" max="100" value={defaultPhotoQuality} class="mt-2 block w-full accent-black" />
+          <span class="mt-2 block text-xs font-normal text-neutral-600">Up to {photoMaxSide} px on the longest side, no upscaling. Metadata is removed; transparency becomes white.</span>
+        </label>
+      </div>
+      <p id="photo-status" role="status" class="mb-4 text-sm font-semibold"></p>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <figure id="photo-original" hidden class="min-w-0 border border-neutral-200 p-4">
+          <figcaption class="mb-3 text-sm font-bold">Original <span class="font-normal text-neutral-600"></span></figcaption>
+          <img alt="Original photo preview" class="max-h-[500px] w-full object-contain" />
+        </figure>
+        <figure id="photo-result" hidden class="min-w-0 border border-neutral-200 p-4">
+          <figcaption class="mb-3 text-sm font-bold">Optimized JPEG <span class="font-normal text-neutral-600"></span></figcaption>
+          <img alt="Optimized photo preview" class="max-h-[500px] w-full object-contain" />
+          <a id="photo-download" class="mt-4 inline-block border border-black bg-black px-4 py-2 text-sm font-bold text-white hover:bg-neutral-700">Download JPEG</a>
+          <form id="photo-backup" class="mt-4 border-t border-neutral-200 pt-4">
+            <label class="block text-sm font-bold">Recipe slug
+              <input name="slug" required maxlength="120" pattern="[a-z0-9]+(-[a-z0-9]+)*" value={slug} placeholder="tiramisu-truffles" class="mt-2 block w-full border border-neutral-400 p-2 font-normal" />
+            </label>
+            <p class="mt-2 text-xs text-neutral-600">Use the recipe’s filename without <code>.md</code>. Existing backups are not overwritten.</p>
+            <button class="mt-3 cursor-pointer border border-black px-4 py-2 text-sm font-bold hover:bg-neutral-100 disabled:opacity-50">Save project backup</button>
+          </form>
+        </figure>
+      </div>
+      <p id="backup-status" role="status" class="mt-4 break-words text-sm font-semibold"></p>
+      <section class="mt-8 border-t border-black pt-5" aria-labelledby="upload-heading">
+        <h2 id="upload-heading" class="text-xl font-bold">Photo library</h2>
+        <p class="mt-2 text-sm text-neutral-600">Upload a saved backup, then choose <strong>Use this photo</strong> to link it to the recipe or draft.</p>
+        {!hasKey && <p class="mt-3 border border-amber-300 bg-amber-50 p-3 text-sm">Uploads are off. Add <code>IMAGEKIT_PRIVATE_KEY</code> to <code>.env</code> and restart the dev server.</p>}
+        <div id="photo-library" data-enabled={String(hasKey)}>
+          <p id="library-summary" class="mt-4 text-sm font-semibold"></p>
+          {!backups.length && <p class="mt-3 border border-neutral-200 p-4 text-sm">No backups yet. Choose a photo above and save a project backup.</p>}
+          <ul class="mt-3 divide-y divide-neutral-200 border-y border-neutral-200">
+            {backups.map((backup) => (
+              <li data-photo={backup.slug} data-state={backup.state} data-current-url={backup.url} data-can-edit={String(backup.canEdit)} class:list={['flex flex-wrap items-center justify-between gap-3 p-3', backup.slug === slug && 'bg-neutral-100']}>
+                <div class="flex min-w-0 items-center gap-3">
+                  <a href={`/api/dev/photo-preview?slug=${encodeURIComponent(backup.slug)}`} target="_blank" rel="noopener" aria-label={`Open saved photo for ${backup.title} in a new tab`} class="shrink-0">
+                    <img src={`/api/dev/photo-preview?slug=${encodeURIComponent(backup.slug)}`} alt={`Saved photo for ${backup.title}`} width="96" height="72" loading="lazy" class="h-[72px] w-24 border border-neutral-200 bg-neutral-100 object-cover" />
+                  </a>
+                  <div>
+                    <h3 class="font-bold">{backup.title}</h3>
+                    <p class="break-all text-xs text-neutral-600">{backup.filename} · {Math.round(backup.bytes / 1024)} KB</p>
+                    <p data-photo-status class="mt-1 text-xs font-semibold">{labels[backup.state]}</p>
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button data-photo-action type="button" disabled={!hasKey} class="cursor-pointer border border-black px-3 py-2 text-sm font-bold hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50">
+                    {backup.state === 'imagekit' ? 'Upload replacement' : 'Upload to ImageKit'}
+                  </button>
+                  <button data-photo-remove type="button" hidden={!backup.url} aria-label={`Remove image link for ${backup.title}`} class="cursor-pointer border border-neutral-300 px-3 py-2 text-sm font-bold hover:bg-neutral-100 disabled:opacity-50">Remove image link</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p id="upload-status" role="status" class="mt-3 text-sm font-semibold"></p>
+        <div id="upload-result" hidden class="mt-3">
+          <label class="block text-sm font-bold">ImageKit URL
+            <input id="upload-url" type="url" readonly class="mt-2 block w-full border border-neutral-400 p-2 font-normal" />
+          </label>
+          <button id="apply-upload-url" type="button" class="mt-2 cursor-pointer border border-black bg-black px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Use this photo</button>
+          <button id="copy-upload-url" type="button" class="mt-2 cursor-pointer border border-black px-4 py-2 text-sm font-bold hover:bg-neutral-100">Copy URL</button>
+        </div>
+      </section>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { maxPhotoBytes } from '../../lib/photo-settings';
+
+  const picker = document.querySelector<HTMLInputElement>('#photo-file')!;
+  const drop = document.querySelector('#photo-drop')!;
+  const quality = document.querySelector<HTMLInputElement>('#photo-quality')!;
+  const qualityValue = document.querySelector<HTMLOutputElement>('#photo-quality-value')!;
+  const status = document.querySelector('#photo-status')!;
+  const original = document.querySelector<HTMLElement>('#photo-original')!;
+  const result = document.querySelector<HTMLElement>('#photo-result')!;
+  const download = document.querySelector<HTMLAnchorElement>('#photo-download')!;
+  const backupForm = document.querySelector<HTMLFormElement>('#photo-backup')!;
+  const backupButton = backupForm.querySelector('button')!;
+  const backupStatus = document.querySelector('#backup-status')!;
+  const library = document.querySelector<HTMLElement>('#photo-library')!;
+  const uploadStatus = document.querySelector('#upload-status')!;
+  const uploadResult = document.querySelector<HTMLElement>('#upload-result')!;
+  const uploadUrl = document.querySelector<HTMLInputElement>('#upload-url')!;
+  const applyButton = document.querySelector<HTMLButtonElement>('#apply-upload-url')!;
+  let file: File | undefined;
+  let originalUrl: string | undefined;
+  let resultUrl: string | undefined;
+  let pending: AbortController | undefined;
+  let preview: { source: File; quality: string } | undefined;
+
+  const size = (bytes: number) => `${(bytes / 1024).toFixed(1)} KB`;
+  function clearPreview(figure: HTMLElement, url?: string) {
+    figure.hidden = true;
+    figure.querySelector('img')!.removeAttribute('src');
+    if (url) URL.revokeObjectURL(url);
+  }
+  function showPreview(figure: HTMLElement, url: string, bytes: number, dimensions: string | null) {
+    figure.querySelector('img')!.src = url;
+    figure.querySelector('figcaption span')!.textContent = `· ${dimensions?.replace('x', ' × ')} px · ${size(bytes)}`;
+    figure.hidden = false;
+  }
+  async function optimize() {
+    pending?.abort();
+    clearPreview(result, resultUrl);
+    resultUrl = undefined;
+    preview = undefined;
+    download.removeAttribute('href');
+    const source = file;
+    if (!source) return;
+    const selectedQuality = quality.value;
+    const controller = new AbortController();
+    pending = controller;
+    status.textContent = 'Optimizing photo…';
+    try {
+      const response = await fetch(`/api/dev/optimize-photo?quality=${selectedQuality}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: source,
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error ?? 'Could not optimize the photo.');
+      }
+      const jpeg = await response.blob();
+      if (controller.signal.aborted) return;
+      originalUrl ??= URL.createObjectURL(source);
+      resultUrl = URL.createObjectURL(jpeg);
+      showPreview(original, originalUrl, source.size, response.headers.get('X-Original-Dimensions'));
+      showPreview(result, resultUrl, jpeg.size, response.headers.get('X-Optimized-Dimensions'));
+      download.href = resultUrl;
+      download.download = `${source.name.replace(/\.[^.]+$/, '') || 'recipe-photo'}-optimized.jpg`;
+      preview = { source, quality: selectedQuality };
+      const savings = Math.round(100 * (1 - jpeg.size / source.size));
+      status.textContent = jpeg.size < source.size
+        ? `Ready to download. ${savings > 0 ? `${savings}% smaller.` : 'Slightly smaller than the original.'}`
+        : 'The JPEG isn’t smaller than the original. Try lowering quality.';
+    } catch (error) {
+      if (!controller.signal.aborted) status.textContent = error instanceof Error ? error.message : 'Could not optimize the photo.';
+    } finally {
+      if (pending === controller) pending = undefined;
+    }
+  }
+  function choose(source: File) {
+    clearPreview(original, originalUrl);
+    originalUrl = undefined;
+    backupStatus.textContent = '';
+    file = source.size > 0 && source.size <= maxPhotoBytes ? source : undefined;
+    void optimize();
+    if (!file) status.textContent = 'Choose a non-empty photo no larger than 20 MB.';
+  }
+  picker.addEventListener('change', () => {
+    if (picker.files?.[0]) choose(picker.files[0]);
+  });
+  drop.addEventListener('dragover', (event) => event.preventDefault());
+  drop.addEventListener('drop', (event) => {
+    event.preventDefault();
+    const { files } = (event as DragEvent).dataTransfer ?? {};
+    if (files?.[0]) {
+      picker.value = '';
+      choose(files[0]);
+    }
+  });
+  quality.addEventListener('input', () => { qualityValue.value = quality.value; });
+  quality.addEventListener('change', () => void optimize());
+  backupForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!preview || backupButton.disabled) return;
+    const slug = String(new FormData(backupForm).get('slug'));
+    const params = new URLSearchParams({ quality: preview.quality, backup: slug });
+    backupButton.disabled = true;
+    backupStatus.textContent = 'Saving project backup…';
+    try {
+      const response = await fetch(`/api/dev/optimize-photo?${params}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: preview.source,
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error ?? 'Could not save the backup.');
+      backupStatus.textContent = `Saved ${payload.path} for manual recovery.`;
+      try {
+        const response = await fetch(`/dev/photos?${new URLSearchParams({ slug })}`);
+        if (!response.ok) throw new Error();
+        const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const updated = page.querySelector('#photo-library');
+        if (!updated) throw new Error();
+        library.replaceChildren(...updated.childNodes);
+        refreshLibrary();
+      } catch {
+        backupStatus.textContent += ' Reload the page to refresh the photo library.';
+      }
+    } catch (error) {
+      backupStatus.textContent = error instanceof Error ? error.message : 'Could not save the backup.';
+    } finally {
+      backupButton.disabled = false;
+    }
+  });
+  const receipts = new Map<string, string>();
+  const storageKey = (slug: string) => `gustoso:imagekit:${slug}`;
+  let uploading = false;
+  let selection: { slug: string; url: string; expected: string; title: string } | undefined;
+  function pendingUrl(row: HTMLElement) {
+    const slug = row.dataset.photo!;
+    let url = receipts.get(slug);
+    if (!url) {
+      try { url = localStorage.getItem(storageKey(slug)) ?? undefined; } catch { /* Storage unavailable. */ }
+    }
+    return url && url !== row.dataset.currentUrl ? url : undefined;
+  }
+  function refreshLibrary() {
+    const rows = [...library.querySelectorAll<HTMLElement>('[data-photo]')];
+    let pending = 0, ready = 0, linked = 0, other = 0;
+    for (const row of rows) {
+      const hasReceipt = Boolean(pendingUrl(row));
+      const state = row.dataset.state;
+      const button = row.querySelector<HTMLButtonElement>('[data-photo-action]')!;
+      const remove = row.querySelector<HTMLButtonElement>('[data-photo-remove]')!;
+      const title = row.querySelector('h3')!.textContent;
+      button.disabled = uploading || (!hasReceipt && library.dataset.enabled !== 'true');
+      remove.disabled = uploading;
+      remove.hidden = !row.dataset.currentUrl;
+      if (hasReceipt) {
+        pending++;
+        row.querySelector('[data-photo-status]')!.textContent = 'Uploaded · URL not applied';
+        button.textContent = 'Show URL';
+        button.setAttribute('aria-label', `Show ImageKit URL for ${title}`);
+      } else {
+        if (state === 'ready') ready++;
+        else if (state === 'imagekit') linked++;
+        else other++;
+        row.querySelector('[data-photo-status]')!.textContent = state === 'imagekit' ? 'Linked to ImageKit'
+          : state === 'imgur' ? 'Using Imgur' : state === 'other' ? 'Using another URL' : 'Ready to upload';
+        button.textContent = state === 'imagekit' ? 'Upload replacement' : 'Upload to ImageKit';
+        button.setAttribute('aria-label', `${button.textContent}: ${title}`);
+      }
+    }
+    library.querySelector('#library-summary')!.textContent = [
+      `${rows.length} backups`,
+      `${ready} ready to upload`,
+      `${pending} URLs to apply`,
+      `${linked} linked to ImageKit`,
+      ...(other ? [`${other} using another host`] : []),
+    ].join(' · ');
+  }
+  function showUploadUrl(url: string, row: HTMLElement, title: string) {
+    selection = { slug: row.dataset.photo!, url, expected: row.dataset.currentUrl ?? '', title };
+    applyButton.hidden = row.dataset.canEdit !== 'true';
+    uploadUrl.value = url;
+    uploadResult.hidden = false;
+    uploadStatus.textContent = applyButton.hidden
+      ? `ImageKit URL for ${title}. No editable recipe or draft was found.`
+      : `ImageKit URL for ${title}. Choose Use this photo to link it.`;
+    (applyButton.hidden ? uploadUrl : applyButton).focus();
+  }
+  async function changeImage(slug: string, url: string | null, expected: string, title: string) {
+    if (uploading) return;
+    uploading = applyButton.disabled = true;
+    refreshLibrary();
+    uploadStatus.textContent = url ? `Linking ${title}…` : `Removing the image link for ${title}…`;
+    try {
+      const response = await fetch(`/api/dev/recipe-photo-link?${new URLSearchParams({ slug })}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, expected }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error ?? 'Could not update the image link.');
+      for (const row of library.querySelectorAll<HTMLElement>('[data-photo]')) {
+        if (row.dataset.photo !== slug) continue;
+        row.dataset.currentUrl = url ?? '';
+        row.dataset.state = url ? 'imagekit' : 'ready';
+      }
+      if (url) {
+        receipts.delete(slug);
+        try { localStorage.removeItem(storageKey(slug)); } catch { /* Storage unavailable. */ }
+      }
+      selection = undefined;
+      uploadResult.hidden = true;
+      uploadStatus.textContent = url ? `Photo linked to the ${payload.target} for ${title}.`
+        : `Image link removed for ${title}. The backup and hosted file are unchanged.`;
+    } catch (error) {
+      uploadStatus.textContent = error instanceof Error ? error.message : 'Could not update the image link.';
+    } finally {
+      uploading = applyButton.disabled = false;
+      refreshLibrary();
+    }
+  }
+  applyButton.addEventListener('click', () => {
+    if (selection) void changeImage(selection.slug, selection.url, selection.expected, selection.title);
+  });
+  refreshLibrary();
+  library.addEventListener('click', async (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest('[data-photo-action], [data-photo-remove]')) return;
+    const row = event.target.closest<HTMLElement>('[data-photo]');
+    if (!row || uploading) return;
+    const slug = row.dataset.photo!;
+    const title = row.querySelector('h3')!.textContent ?? slug;
+    if (event.target.closest('[data-photo-remove]')) {
+      if (row.dataset.currentUrl && window.confirm(`Remove the image link for ${title}? The backup and hosted file will stay.`)) {
+        await changeImage(slug, null, row.dataset.currentUrl, title);
+      }
+      return;
+    }
+    const existing = pendingUrl(row);
+    if (existing) {
+      showUploadUrl(existing, row, title);
+      return;
+    }
+    if (library.dataset.enabled !== 'true') return;
+    uploading = true;
+    refreshLibrary();
+    uploadResult.hidden = true;
+    uploadStatus.textContent = `Uploading the saved JPEG for ${title}…`;
+    try {
+      const response = await fetch(`/api/dev/upload-photo?${new URLSearchParams({ slug })}`, { method: 'POST' });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || typeof payload?.url !== 'string') throw new Error(payload?.error ?? 'ImageKit upload failed.');
+      receipts.set(slug, payload.url);
+      try { localStorage.setItem(storageKey(slug), payload.url); } catch { /* The URL remains available on this page. */ }
+      showUploadUrl(payload.url, row, title);
+    } catch (error) {
+      uploadStatus.textContent = error instanceof Error ? error.message : 'ImageKit upload failed.';
+    } finally {
+      uploading = false;
+      refreshLibrary();
+    }
+  });
+  document.querySelector('#copy-upload-url')!.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(uploadUrl.value);
+      uploadStatus.textContent = 'URL copied.';
+    } catch {
+      uploadUrl.select();
+      uploadStatus.textContent = 'Copy the selected URL manually.';
+    }
+  });
+</script>

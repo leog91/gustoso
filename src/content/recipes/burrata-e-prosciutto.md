@@ -1,5 +1,6 @@
 ---
 title: Burrata e Prosciutto
+type: Starter
 img: https://i.imgur.com/vzbNlRk.jpeg
 parts:
   - ingredients:

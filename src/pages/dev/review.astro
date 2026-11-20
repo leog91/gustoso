@@ -1,0 +1,92 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+if (!import.meta.env.DEV) return new Response(null, { status: 404 });
+Astro.response.headers.set('Cache-Control', 'no-store');
+
+const { listImports, validateMarkdown } = await import('../../lib/recipe-import');
+const recipes = (await getCollection('recipes'))
+  .filter((recipe) => recipe.data.needsReview)
+  .sort((a, b) => a.data.title.localeCompare(b.data.title));
+const { drafts } = listImports();
+function draftTitle(draft: (typeof drafts)[number]) {
+  try { return validateMarkdown(draft.markdown).data.title; }
+  catch { return draft.slug; }
+}
+const pending = drafts.filter((draft) => draft.status === 'draft')
+  .map((draft) => ({ ...draft, title: draftTitle(draft) }))
+  .sort((a, b) => a.title.localeCompare(b.title));
+const approved = drafts.filter((draft) => draft.status === 'approved')
+  .map((draft) => ({ ...draft, title: draftTitle(draft) }));
+const skippedCount = drafts.filter((draft) => draft.status === 'skipped').length;
+---
+
+<Layout title="Review queue | Gustoso">
+  <main class="min-h-dvh bg-white text-black">
+    <div class="mx-auto max-w-6xl border-x border-neutral-200 px-4 py-6 sm:px-6">
+      <nav class="flex flex-wrap gap-5 text-xs font-bold uppercase">
+        <a href="/" class="underline">← Recipe index</a>
+        <a href="/dev/import" class="underline">Import workspace</a>
+        <a href="/dev/trash" class="underline">Editorial trash</a>
+      </nav>
+      <header class="mt-6 border-b border-black pb-6">
+        <p class="text-xs font-bold uppercase tracking-widest text-neutral-500">Development only</p>
+        <h1 class="mt-2 text-4xl font-black uppercase tracking-tight">Review queue</h1>
+        <p class="mt-3 text-sm text-neutral-600">Find recipes awaiting verification here. Open a recipe to review it; only approve the ones you want to keep.</p>
+      </header>
+
+      <section class="mt-8" aria-labelledby="flagged-heading">
+        <h2 id="flagged-heading" class="text-xl font-bold">Recipes with needsReview: true <span class="text-neutral-500">({recipes.length})</span></h2>
+        <p class="mt-2 text-sm text-neutral-600">These Markdown files are already in the recipe collection, but hidden in production until approved.</p>
+        {recipes.length === 0 ? (
+          <p class="mt-4 border border-neutral-200 p-4 text-sm text-neutral-500">No collection recipes currently have the review flag. Local PDF drafts are listed separately below.</p>
+        ) : (
+          <ul class="mt-4 grid gap-3 sm:grid-cols-2">
+            {recipes.map((recipe) => (
+              <li>
+                <a href={`/recipes/${recipe.id}`} class="block h-full border border-yellow-300 bg-yellow-50 p-4 hover:border-black focus-visible:outline-2 focus-visible:outline-offset-2">
+                  <span class="text-xs font-bold uppercase text-yellow-800">Needs review{recipe.data.type ? ` · ${recipe.data.type}` : ''}</span>
+                  <h3 class="mt-2 text-lg font-bold">{recipe.data.title}</h3>
+                  <p class="mt-2 text-xs text-neutral-600">Open recipe to inspect, approve, or discard →</p>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section class="mt-10 border-t border-neutral-200 pt-6" aria-labelledby="drafts-heading">
+        <h2 id="drafts-heading" class="text-xl font-bold">Local PDF drafts awaiting review <span class="text-neutral-500">({pending.length})</span></h2>
+        <p class="mt-2 text-sm text-neutral-600">Already-created recipes in gitignored staging. They are not in the main index yet. Open one to preview and approve it, or skip it.</p>
+        {pending.length === 0 ? (
+          <p class="mt-4 text-sm text-neutral-500">No local drafts awaiting review.</p>
+        ) : (
+          <ul class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {pending.map((draft) => (
+              <li>
+                <a href={`/dev/import?draft=${draft.id}`} class="block h-full border border-neutral-300 p-4 hover:border-black hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2">
+                  <span class="text-xs font-bold uppercase text-yellow-800">Local draft</span>
+                  <h3 class="mt-2 text-lg font-bold">{draft.title}</h3>
+                  <p class="mt-2 text-xs text-neutral-500">PDF pages {draft.pages.join(', ')}</p>
+                  <p class="mt-3 text-xs font-bold underline">Review draft →</p>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+        {skippedCount > 0 && <p class="mt-4 text-sm text-neutral-600">{skippedCount} skipped {skippedCount === 1 ? 'draft' : 'drafts'} can be restored in the <a href="/dev/import" class="underline">import workspace</a>.</p>}
+      </section>
+
+      {approved.length > 0 && (
+        <section class="mt-10 border-t border-neutral-200 pt-6" aria-labelledby="approved-heading">
+          <h2 id="approved-heading" class="text-xl font-bold">Approved imports <span class="text-neutral-500">({approved.length})</span></h2>
+          <p class="mt-2 text-sm text-neutral-600">These have left the review queue and are now regular recipes. Open them here or find them on the recipe index.</p>
+          <ul class="mt-4 flex flex-wrap gap-3">
+            {approved.map((draft) => <li><a href={`/recipes/${draft.slug}`} class="inline-block border border-green-700 px-4 py-3 text-sm font-bold text-green-800 underline">{draft.title} →</a></li>)}
+          </ul>
+        </section>
+      )}
+    </div>
+  </main>
+</Layout>

@@ -2,6 +2,27 @@
 
 This guide explains how to convert recipes from PDF files into the Gustoso markdown format.
 
+## Local Interactive Workflow (Recommended)
+
+Use this when you want to select only a few recipes and keep the PDF and unfinished recipes out of Git:
+
+1. Put the PDF in the project's **`temp/`** folder (already gitignored). No upload or external AI service is involved.
+2. Run `bun run dev` and open **`http://localhost:4321/dev/import`**, or click **Import Recipes** on the homepage.
+3. Choose a PDF and click **Extract page text**. The original PDF is available alongside the editor and in a separate tab. PDFs up to 500 MB / 500 pages are supported; text extraction needs a text layer (no OCR).
+4. Search page text and select only the relevant pages. Trim **Selected source text** to just the recipe you want; page selection alone does not identify recipe boundaries. If a scanned page has no text, transcribe its recipe into this box manually.
+5. Enter a title and unique kebab-case slug, then **Create local draft**. A Markdown template and the source excerpt are saved separately in **`temp/recipe-drafts/`**. This does not create a recipe in the catalog.
+6. Fill in the YAML ingredients, instructions, and components from the source. Yield (`serves`) and storage are optional. Extraction does not guess quantities or invent missing instructions. A format example is included in the editor.
+7. **Save local draft** to resume later, even if the YAML is unfinished. **Validate & preview** checks the same schema as the recipe collection and shows a safe plain-text preview. Schema validity does not establish recipe accuracy. Notes are shown as Markdown source, not rendered HTML.
+8. Check quantities, units, all components, and instructions against the PDF. Tick the confirmation and click **Approve & add to recipe collection**. Approval saves current edits, validates them, requires some ingredients or instructions, removes `needsReview`, and creates exactly one `src/content/recipes/<slug>.md`. Remove `published: false` before approving. Existing slugs are never overwritten.
+9. **Skip** keeps unwanted drafts locally; **Restore** brings them back to the queue. Approved draft records also remain local as references, but leave the review queue.
+10. Review the recipe's Git diff and run `bun run build` before committing. PDFs, extracted excerpts, and all unapproved drafts remain ignored; source metadata is not copied into the recipe file.
+
+To add a photo before or after approval, use [Optimize Photo and the ImageKit Photo library](../README.md#optimize-a-recipe-photo). Save the JPEG under the recipe's slug, upload it, then click **Use this photo** to set `img` without changing the review status. If you already have the draft open in the import editor, save your edits before applying the photo, then reopen the draft to pick up the new URL.
+
+The page and its API return 404 outside development. Writes require same-origin JSON requests. Keep your dev server local; this is a filesystem editorial tool, not a shared authenticated CMS. `bun run test` covers staging, validation, approval, skip/restore, path restrictions, and duplicate protection in a disposable project.
+
+The rest of this guide describes the older manual-file workflow. Unlike local staging, recipes manually placed in `src/content/recipes/` are visible to Git even when marked `needsReview`.
+
 ## Overview
 
 The process has four main steps:
@@ -460,4 +481,4 @@ When adding a recipe from a PDF:
 
 ## 9. Reference: Content Config
 
-The recipe schema is defined in `src/content.config.ts`. It uses Zod for validation. The `.passthrough()` method means extra fields (like `needsReview`) are allowed without strict schema enforcement, making it easy to add flags for UI purposes.
+The recipe schema is defined in `src/lib/recipe-schema.ts` and shared by `src/content.config.ts` and the local importer. It uses Zod for validation, explicitly validates `needsReview` as an optional boolean, and allows additional metadata through `.passthrough()`.

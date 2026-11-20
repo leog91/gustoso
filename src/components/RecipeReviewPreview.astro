@@ -1,0 +1,26 @@
+---
+import type { parseRecipePreview } from '../lib/recipe-review';
+
+type Props = ReturnType<typeof parseRecipePreview>;
+const { data, body } = Astro.props;
+const parts = data.parts?.length ? data.parts : [{ ingredients: data.ingredients, instructions: data.instructions }];
+---
+
+<article class="space-y-5 text-sm leading-6">
+  <header>
+    <h3 class="text-xl font-bold">{data.title}</h3>
+    {data.type && <p class="text-neutral-400">{data.type}</p>}
+    {data.serves && <p><strong>Yield:</strong> {data.serves}</p>}
+    {data.description && <p class="mt-2">{data.description}</p>}
+  </header>
+  {parts.map((part) => (
+    <section class="space-y-3 border-t border-neutral-600 pt-4">
+      {part.name && <h4 class="font-bold">{part.name}</h4>}
+      {part.ingredients?.length ? <div><h5 class="font-bold">Ingredients</h5><ul class="list-disc space-y-1 pl-5">{part.ingredients.map((ingredient) => <li>{ingredient}</li>)}</ul></div> : null}
+      {part.instructions?.length ? <div><h5 class="font-bold">Instructions</h5><ol class="list-decimal space-y-2 pl-5">{part.instructions.map((step) => <li>{step.description}</li>)}</ol></div> : null}
+      {part.storage && <p><strong>Storage:</strong> {part.storage}</p>}
+    </section>
+  ))}
+  {data.storage && <p><strong>Storage:</strong> {data.storage}</p>}
+  {body.trim() && <section class="border-t border-neutral-600 pt-4"><h4 class="font-bold">Notes (Markdown source)</h4><p class="mt-2 whitespace-pre-wrap break-words">{body}</p></section>}
+</article>

@@ -35,6 +35,21 @@ const capitalizeFirst = (value: string) =>
 
 const pageTitle = `${currentRecipe.data.title} | Gustoso`;
 const pageDescription = currentRecipe.data.description ?? `Recipe for ${currentRecipe.data.title}.`;
+let photoProvider: string | undefined;
+let photoBackup: string | undefined;
+if (isDev && currentRecipe.data.img) {
+  try {
+    const { hostname, protocol } = new URL(currentRecipe.data.img);
+    if (protocol === 'https:' || protocol === 'http:') {
+      if (hostname === 'imgur.com' || hostname.endsWith('.imgur.com')) photoProvider = 'Imgur';
+      if (hostname === 'ik.imagekit.io') photoProvider = 'ImageKit';
+    }
+  } catch { /* A local or malformed URL isn't a hosted photo. */ }
+  if (photoProvider) {
+    const { findPhotoBackup } = await import('../../lib/photo-backup-path');
+    photoBackup = findPhotoBackup(currentRecipe.id);
+  }
+}
 
 const recipeJsonLd = {
   "@context": "https://schema.org",
@@ -75,7 +90,7 @@ const recipeJsonLd = {
   <div class="min-h-dvh bg-white text-black">
     <article class="mx-auto max-w-6xl border-x border-neutral-200 bg-white">
           <header class="border-b border-neutral-200">
-            <div class="flex items-center justify-between px-4 py-3 sm:px-6">
+            <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
               <a
                 href="/"
                 class="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-black transition hover:text-[#C0392B]"
@@ -83,7 +98,9 @@ const recipeJsonLd = {
                 <img src={leftArrow.src} alt="Back to recipes" class="h-3.5 w-3.5" />
                 Recipe Index
               </a>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                {isDev && <a href="/dev/review" class="mr-2 text-[11px] font-bold uppercase underline">Review Queue</a>}
+                {isDev && <a href={`/dev/photos?slug=${encodeURIComponent(currentRecipe.id)}`} class="mr-2 text-[11px] font-bold uppercase underline">Optimize Photo</a>}
                 {isDev && currentRecipe.data.needsReview ? (
                   <>
                     <button
@@ -103,6 +120,15 @@ const recipeJsonLd = {
                       🗑️ Discard
                     </button>
                   </>
+                ) : isDev ? (
+                  <button
+                    data-slug={recipe}
+                    data-action="mark-review"
+                    class="cursor-pointer border border-yellow-700 bg-yellow-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-yellow-800 transition hover:bg-yellow-100 disabled:opacity-50"
+                    title="Set needsReview: true and hide this recipe from production until approved again"
+                  >
+                    Mark for review
+                  </button>
                 ) : null}
                 <div class="text-[11px] font-bold uppercase tracking-[0.18em] text-black">
                   Gustoso
@@ -112,12 +138,32 @@ const recipeJsonLd = {
 
             <div class="grid border-t border-neutral-200 lg:grid-cols-[1.15fr_0.85fr]">
               {currentRecipe.data.img ? (
-                <div class="border-b border-neutral-200 lg:border-b-0 lg:border-r lg:border-neutral-200">
+                <div class="flex flex-col border-b border-neutral-200 lg:border-b-0 lg:border-r lg:border-neutral-200">
                   <img
                     src={currentRecipe.data.img}
                     alt={currentRecipe.data.title}
+                    id={photoProvider ? "dev-hosted-photo" : undefined}
                     class="h-[260px] w-full object-cover sm:h-[360px] lg:h-full"
                   />
+                  {photoProvider && (
+                    <>
+                      <p id="dev-hosted-photo-error" hidden role="status" class="border-t border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                        <strong>The {photoProvider} photo didn’t load.</strong>{" "}
+                        {photoBackup
+                          ? <>Backup: <code class="break-all">{photoBackup}</code>. <a class="underline" href={`/dev/photos?slug=${encodeURIComponent(currentRecipe.id)}#upload-heading`}>Upload it to ImageKit</a>, then replace this recipe’s <code>img</code> URL.</>
+                          : <>No project backup was found. Re-upload the original photo, then replace this recipe’s <code>img</code> URL.</>}
+                      </p>
+                      <script is:inline>
+                        (() => {
+                          const photo = document.getElementById('dev-hosted-photo');
+                          const notice = document.getElementById('dev-hosted-photo-error');
+                          const showNotice = () => { notice.hidden = false; };
+                          photo.addEventListener('error', showNotice, { once: true });
+                          if (photo.complete && photo.naturalWidth === 0) showNotice();
+                        })();
+                      </script>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div class="flex min-h-[260px] flex-col justify-between border-b border-neutral-200 bg-[#F5F5F5] p-6 sm:min-h-[360px] lg:border-b-0 lg:border-r lg:border-neutral-200">
@@ -279,8 +325,15 @@ const recipeJsonLd = {
 {isDev && <script>
   import { actions } from "astro:actions";
 
+  // Content HMR can reload this page before the action response arrives.
+  const pendingReview = sessionStorage.getItem('gustoso-review-redirect');
+  if (pendingReview && document.querySelector<HTMLButtonElement>('button[data-action="approve"]')?.dataset.slug === pendingReview) {
+    sessionStorage.removeItem('gustoso-review-redirect');
+    window.location.replace('/dev/review');
+  }
+
   document.addEventListener("click", async (e) => {
-    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-action]");
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-action]");
     if (!btn) return;
 
     const slug = btn.dataset.slug;
@@ -289,6 +342,7 @@ const recipeJsonLd = {
 
     e.preventDefault();
     e.stopPropagation();
+    btn.disabled = true;
 
     try {
       if (action === "discard") {
@@ -297,10 +351,19 @@ const recipeJsonLd = {
       } else if (action === "approve") {
         await actions.removeNeedsReview({ slug });
         window.location.reload();
+      } else if (action === "mark-review") {
+        sessionStorage.setItem('gustoso-review-redirect', slug);
+        const { error } = await actions.markNeedsReview({ slug });
+        if (error) throw new Error(error.message);
+        sessionStorage.removeItem('gustoso-review-redirect');
+        window.location.href = '/dev/review';
       }
     } catch (err: any) {
+      if (action === 'mark-review') sessionStorage.removeItem('gustoso-review-redirect');
       console.error("Action failed:", err);
       alert(err.message || "Action failed");
+    } finally {
+      btn.disabled = false;
     }
   });
 </script>}

@@ -1,8 +1,10 @@
 import Fuse from 'fuse.js'
 import { defineAction } from 'astro:actions';
 import { z } from 'astro:schema';
+import { getCollection } from 'astro:content';
 import fs from 'fs';
 import path from 'path';
+import { markNeedsReview } from '../lib/recipe-review';
 const recipesDir = path.resolve(process.cwd(), 'src/content/recipes');
 const trashDir = path.resolve(process.cwd(), '.trash');
 
@@ -25,16 +27,14 @@ export const server = {
             search: z.string(),
         }),
         handler: async ({ search }) => {
-            const recipes = Object.values(import.meta.glob('../content/recipes/*.md', { eager: true }))
-                .map((r) => {
-                    const recipe = r as { file: string; frontmatter: { title: string; published: boolean } };
-                    return {
-                        url: recipe.file.split("/").pop()?.replace(".md", ""),
-                        title: recipe.frontmatter.title,
-                        published: recipe.frontmatter.published,
-                    };
-                })
-                .filter((r) => r.published !== false)
+            const recipes = (await getCollection('recipes'))
+                .filter((recipe) => recipe.data.published !== false)
+                .filter((recipe) => import.meta.env.DEV || !recipe.data.needsReview)
+                .map((recipe) => ({
+                    url: recipe.id,
+                    title: recipe.data.title,
+                    published: recipe.data.published,
+                }));
 
             const fuseOptions = {
                 keys: [
@@ -82,6 +82,22 @@ export const server = {
                 throw new Error(`Recipe already exists: ${slug}`);
             }
             fs.renameSync(src, dest);
+            return { success: true, slug };
+        },
+    }),
+
+    markNeedsReview: defineAction({
+        accept: 'json',
+        input: z.object({ slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(120) }),
+        handler: async ({ slug }) => {
+            guardDev();
+            const filePath = path.join(recipesDir, `${slug}.md`);
+            const stat = fs.lstatSync(filePath);
+            if (!stat.isFile() || stat.isSymbolicLink()) {
+                throw new Error('Recipe must be a regular Markdown file.');
+            }
+            const content = fs.readFileSync(filePath, 'utf-8');
+            fs.writeFileSync(filePath, markNeedsReview(content), 'utf-8');
             return { success: true, slug };
         },
     }),
